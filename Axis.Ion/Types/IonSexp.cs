@@ -15,7 +15,7 @@ namespace Axis.Ion.Types
 
         public IIonType[]? Value => _elements?.ToArray();
 
-        public IonTypes Type => IonTypes.List;
+        public IonTypes Type => IonTypes.Sexp;
 
         public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
 

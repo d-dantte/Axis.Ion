@@ -1,0 +1,244 @@
+﻿# Ion Custom Binary Format
+This document aims to flesh out the specification for the binary representation of the ion data types
+
+
+## Contents
+1. [Introduction](#Introduction)
+2. [Annotations](#Annotations)
+3. [Ion-Null](#ion-null)
+4. [Ion-Bool](#ion-bool)
+5. [Ion-Int](#ion-int)
+6. [Ion-Decimal](#ion-decimal)
+7. [Ion-Float](#ion-float)
+8. [Ion-Timestamp](#ion-timestamp)
+9. [Ion-String](#ion-string)
+10. [Ion-Symbol](#ion-symbol)
+	- [Symbol-Table](#symbol-table)
+11. [Ion-Blob](#ion-blob)
+12. [Ion-Clob](#ion-clob)
+13. [Ion-List](#ion-list)
+14. [Ion-Struct](#ion-struct)
+15. [Ion-Sexp](#ion-sexp)
+16. [Ion-Symbol-Value](#ion-symbol-value)
+17. [Apendix](#Apendix)
+
+
+## Introduction
+The binary format for ion data described here is chosen to be similar to the 
+(official)[https://amazon-ion.github.io/ion-docs/docs/binary.html] format, but with some differences
+that facilitate ease/simplicity of procesing.
+
+Generally speaking, the first byte of each ion-value, henceforth called the type-metadata, represents
+it's _type_: since ion only supports 13 distinct types, this byte is more than sufficient to represent
+13 distinct values: 1 - 13. For some ion values (bool and null), a single byte is usually enough to encapsulate
+the entire data.
+
+The first 4 bits (index 0 - 3) are reserved to represent actual type identifiers, bit 5 (index 4) is reserved
+for indicating if annotations exist on the value, while the remaining 3 bits (index 5 - 7) are left for each
+type to use as it pleases.
+
+Following the first byte either byte-groups that represent annotations, or the payload for the ion-value
+
+
+## Annotations
+
+### Type-Metadata
+- `[...1-....]`
+
+### Description
+Annotations are essentially ion symbols. Ion Symbols have a special way they are represented in binary,
+using a symbol table, discussed in the [Ion-Symbol](#Ion-Symbol) section.
+
+Annotations are not actual ion types, they exist to decorate ion values. When present, a bit in the
+type-metadata is flipped on. When this happens, the next 4 bytes after the type-metadata represents the
+_annotation count_: an integer indicating how many annotations are present on the value. 
+Being ion symbols, the actual annotations on the ion value are themselves represented as integer 
+ids pointing into the [symbol table](#Symbol-Table); these ids immediately follow the annotation-count byte.
+
+Note: in the binary notations that follow, a  '.' indicates that the bit in that position is ignored.
+
+
+## Ion-Null
+
+### Type-Metadata
+- `[....-0001]`
+- 1 (dec)
+- 0x1 (hex)
+
+### Description
+The type-metadata alone is enough to represent the ion-null. Extra information is only present if, for example,
+annotations are present on the null value.
+
+
+## Ion-Bool
+
+### Type-Metadata
+- `[....-0010]`
+- 2 (dec)
+- 0x2 (hex)
+
+### Description
+Like the null type, the type-metadata byte is sufficient for encapsulating all instances of the bool value.
+
+- true: `[.1..-0010]`
+- false: `[.0..-0010]`
+- null: `[..1.-0010]`
+
+
+## Ion-Int
+
+### Type-Metadata
+- `[....-0011]`
+- 3 (dec)
+- 0x3 (hex)
+
+### Custom-Metadata
+- null: `[..1.-0011]`
+- Int8: `[00..-0011]`
+- Int16: `[01..-0011]`
+- Int32: `[10..-0011]`
+- Intxx: `[11..-0011]`
+
+### Description
+Integers require additional bytes for their data to be represented. This will usually follow the annotations
+if present, or follow the type-metadata.
+
+Ion supports arbitrary-length integers, so special consideration is taken to cater for this. 
+
+### Examples
+1. To represent the value '42' as an Int8 value, we need 2 bytes:
+   - 00 [00..-0011]
+   - 01 [0010-1010]
+2. To represent the value '1228' as an Int16 value, we need 3 bytes:
+   - 00 [01..-0011]
+   - 01 [1100-1100]
+   - 02 [0000-0100]
+3. To represent the value '86443187' as an Int32 value, we need 5 bytes:
+   - 00 [10..-0011]
+   - 01 [1011-0011]
+   - 02 [0000-0100]
+   - 03 [0010-0111]
+   - 04 [0000-0101]
+4. To represent arbitrarily large integers, e.g '9223372036854775807', we need 11 bytes:
+   - 00 [11..-0011]
+   - 01 [0000-1010] - [`var-byte`](var-byte) byte-count (10)
+   - 02 [1110-0011]
+   - 03 [1111-0010]
+   - 04 [1111-1111]
+   - 05 [1111-1111]
+   - 06 [1111-1111]
+   - 07 [1111-1111]
+   - 08 [1111-1111]
+   - 09 [1111-1111]
+   - 10 [1000-0111]
+   - 11 [0001-0011]
+
+The special byte-count byte can extend beyond a single byte - in the rare/unlikely situation where an integer
+needs more than 4 billion bytes to be represented, the bit at position 7 (overflow bit) is flipped to a 1 `[1...-...]`,
+indicating that another byte follows for which combining it with the previous byte, converts to an integer
+that indicates the byte count. Note that combining these byte-count values must first remove the overflow bit.
+See [var-byte](#var-byte).
+
+
+## Ion-Decimal
+
+### Type-Metadata
+- `[....-0100]`
+- 4 (dec)
+- 0x4 (hex)
+
+### Custom-Metadata
+- null: `[..1.-0100]`
+
+### Description
+The binary representation for decimals here is a straightforward adaptation of the c# binary representation for decimal,
+ergo 16 bytes of data. This means decimal values have a fixed 17byte size.
+
+
+## Ion-Float
+
+### Type-Metadata
+- `[....-0101]`
+- 5 (dec)
+- 0x5 (hex)
+
+### Custom-Metadata
+- null: `[..1.-0101]`
+
+### Description
+As with [decimal](#Ion-Decimal) above, floats have a fixed-sized, striaghtfowrard representation in binary. Floats need
+total of 9 bytes: 1 for type-metadata, 8 for float data.
+
+
+## Ion-Timestamp
+
+### Type-Metadata
+- `[....-0110]`
+- 6 (dec)
+- 0x6 (hex)
+
+### Custom-Metadata
+- null: `[..1.-0110]`
+
+### Description
+The timestamp is made of 8 components, each with their own binary representation, the first 2 of which are mandatory.
+The following lists the components in the order they appear:
+1. Components flag: represented by a regular byte. The first 7 bits represents the presence of the corresponding component.
+2. Year: The year component is represented by a [var-byte](#var-byte)
+3. Month: represented by a regular byte.
+4. Day: represented by a regular byte.
+5. Hour: represented by a regular byte.
+6. Minute: represented by a regular byte
+7. Seconds: represented by a regular byte
+8. Ticks: represented by an int (4 regular bytes)
+
+Writing/reading the timestamp uses the component flags to figure, in order, what component is found at what position.
+
+
+## Ion-String
+
+### Type-Metadata
+- `[....-0111]`
+- 7 (dec)
+- 0x7 (hex)
+
+### Custom-Metadata
+- null: `[..1.-0111]`
+
+### Description
+String data is stored as unicode - ie, 2 bytes per character; however, a string-count component is used to signify
+how many characters (groups of 2 bytes) the string contains. The string-count comes right after the type-metadata,
+and is represented as a `var-byte`.
+
+
+## Ion-Symbols
+
+### Type-Metadata
+- `[....-1000]`
+- 8 (dec)
+- 0x8 (hex)
+
+### Custom-Metadata
+- null: `[..1.-1000]`
+
+### Description
+Symbols are stored with a fixed number of bytes: 1 for the type-metadata, 4 for the symbol id, making a total of 5.
+The symbol id is a pointer into the symbol-table.
+
+#### Symbol-Table
+A symbol table is a key-value-pair construct found at the start of every ion binary data, represented by the `0` byte
+`[0000-0000]`. The following lists the format for the symbol table:
+1. Indicator byte (`[0000-0000]`).
+2. Table entry count: a `var-byte` representing the number of entries in the table.
+4. Entry Data*: [symbol value](#ion-symbol-value)
+	
+
+
+
+
+## Apendix
+
+### var-byte
+A variable byte binary representation. This is a regular 1-byte integer number, except that the sign-bit now represents
+'overflow': if the bit is set, it means another [var-byte](#var-byte) value follows. Reading the collection of `var-byte`
+data requires removing all the overflow bits, and concatenating the remaining bits.

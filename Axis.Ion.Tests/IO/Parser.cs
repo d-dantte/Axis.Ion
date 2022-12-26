@@ -25,7 +25,7 @@ namespace Axis.Ion.Tests.IO
                 Assert.IsNotNull(ionGrammar);
                 Assert.AreEqual("ion", ionGrammar.RootSymbol);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 // do stuff
                 throw;
@@ -217,7 +217,6 @@ namespace Axis.Ion.Tests.IO
 
             var recognizer = ionGrammar.GetRecognizer("ion-decimal");
             Assert.IsNotNull(recognizer);
-            Assert.IsNotNull(recognizer);
 
             var result = recognizer.Recognize(new BufferedTokenReader("null.decimal"));
             var success = result as SuccessResult;
@@ -278,7 +277,6 @@ namespace Axis.Ion.Tests.IO
                 .ImportGrammar(ionXbnfStream);
 
             var recognizer = ionGrammar.GetRecognizer("ion-timestamp");
-            Assert.IsNotNull(recognizer);
             Assert.IsNotNull(recognizer);
 
             var result = recognizer.Recognize(new BufferedTokenReader("null.timestamp"));
@@ -361,7 +359,6 @@ namespace Axis.Ion.Tests.IO
 
             var recognizer = ionGrammar.GetRecognizer("ion-string");
             Assert.IsNotNull(recognizer);
-            Assert.IsNotNull(recognizer);
 
             var result = recognizer.Recognize(new BufferedTokenReader("null.string"));
             var success = result as SuccessResult;
@@ -383,10 +380,276 @@ namespace Axis.Ion.Tests.IO
             Assert.IsNotNull(success);
             Assert.AreEqual(@"""abcd""", success.Symbol.TokenValue());
 
-            result = recognizer.Recognize(new BufferedTokenReader(@"""\"""));
+            result = recognizer.Recognize(new BufferedTokenReader(@"""\ua342"""));
             success = result as SuccessResult;
             Assert.IsNotNull(success);
-            Assert.AreEqual(@"""\""", success.Symbol.TokenValue());
+            Assert.AreEqual(@"""\ua342""", success.Symbol.TokenValue());
+
+            result = recognizer.Recognize(new BufferedTokenReader(@"""
+stuff
+other stuff
+multiline stuff
+"""));
+            success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual(@"""
+stuff
+other stuff
+multiline stuff
+""", success.Symbol.TokenValue());
+
+            result = recognizer.Recognize(@"('''bleh''' '''other bleh''')");
+            result = recognizer.Recognize(@"('''bleh''' '''other bleh''')");
+            result = recognizer.Recognize(@"('''bleh''' '''other bleh''')");
+            success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual(@"('''bleh''' '''other bleh''')", success.Symbol.TokenValue());
+        }
+
+        [TestMethod]
+        public void TestSymbol()
+        {
+            using var ionXbnfStream = typeof(IonIO).Assembly
+                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+
+            var ionGrammar = new Importer()
+                .ImportGrammar(ionXbnfStream);
+
+            var recognizer = ionGrammar.GetRecognizer("ion-symbol");
+            Assert.IsNotNull(recognizer);
+
+
+            var result = recognizer.Recognize("null.symbol");
+            var success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("null.symbol", success.Symbol.TokenValue());
+
+
+            result = recognizer.Recognize("'bleh symbol'");
+            success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("'bleh symbol'", success.Symbol.TokenValue());
+
+
+            result = recognizer.Recognize("*");
+            success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("*", success.Symbol.TokenValue());
+
+
+            result = recognizer.Recognize("abra_ka_dabra");
+            success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("abra_ka_dabra", success.Symbol.TokenValue());
+        }
+
+        [TestMethod]
+        public void TestBlob()
+        {
+            using var ionXbnfStream = typeof(IonIO).Assembly
+                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+
+            var ionGrammar = new Importer()
+                .ImportGrammar(ionXbnfStream);
+
+            var recognizer = ionGrammar.GetRecognizer("ion-blob");
+            Assert.IsNotNull(recognizer);
+
+
+            var result = recognizer.Recognize("null.blob");
+            var success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("null.blob", success.Symbol.TokenValue());
+
+
+            result = recognizer.Recognize("{{ bABvAHIAZQBtACAAaQBwAHMAdQBtACAAbwB0AGgAZQByACAAcwB0AHUAZgBmACAAYQBuAGQAIAB0AGgAZQAgAG0AYQBpAG4AIABzAHQAdQBmAGYA }}");
+            success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual(
+                "{{ bABvAHIAZQBtACAAaQBwAHMAdQBtACAAbwB0AGgAZQByACAAcwB0AHUAZgBmACAAYQBuAGQAIAB0AGgAZQAgAG0AYQBpAG4AIABzAHQAdQBmAGYA }}",
+                success.Symbol.TokenValue());
+        }
+
+        [TestMethod]
+        public void TestClob()
+        {
+            using var ionXbnfStream = typeof(IonIO).Assembly
+                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+
+            var ionGrammar = new Importer()
+                .ImportGrammar(ionXbnfStream);
+
+            var recognizer = ionGrammar.GetRecognizer("ion-clob");
+            Assert.IsNotNull(recognizer);
+
+
+            var result = recognizer.Recognize("null.clob");
+            var success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("null.clob", success.Symbol.TokenValue());
+
+
+            result = recognizer.Recognize("{{ \"regular string\" }}");
+            success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual(
+                @"{{ ""regular string"" }}",
+                success.Symbol.TokenValue());
+        }
+
+        [TestMethod]
+        public void TestList()
+        {
+            using var ionXbnfStream = typeof(IonIO).Assembly
+                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+
+            var ionGrammar = new Importer()
+                .ImportGrammar(ionXbnfStream);
+
+            var recognizer = ionGrammar.GetRecognizer("ion-list");
+            Assert.IsNotNull(recognizer);
+
+
+            var result = recognizer.Recognize("null.list");
+            var success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("null.list", success.Symbol.TokenValue());
+
+
+            result = recognizer.Recognize("[]");
+            success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("[]", success.Symbol.TokenValue());
+
+
+            result = recognizer.Recognize("[null.int]");
+            success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("[null.int]", success.Symbol.TokenValue());
+
+
+            result = recognizer.Recognize("[null.int, abc::[], null.struct]");
+            success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("[null.int, abc::[], null.struct]", success.Symbol.TokenValue());
+        }
+
+        [TestMethod]
+        public void TestStruct()
+        {
+            using var ionXbnfStream = typeof(IonIO).Assembly
+                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+
+            var ionGrammar = new Importer()
+                .ImportGrammar(ionXbnfStream);
+
+            var recognizer = ionGrammar.GetRecognizer("ion-struct");
+            Assert.IsNotNull(recognizer);
+
+
+            var result = recognizer.Recognize("null.struct");
+            var success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("null.struct", success.Symbol.TokenValue());
+
+
+            result = recognizer.Recognize("{}");
+            success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("{}", success.Symbol.TokenValue());
+
+
+            result = recognizer.Recognize("{abc:null.int}");
+            success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("{abc:null.int}", success.Symbol.TokenValue());
+
+            result = recognizer.Recognize("{abc:null.int, 'stuff':null.bool, \"bleh\":2005T}");
+            success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("{abc:null.int, 'stuff':null.bool, \"bleh\":2005T}", success.Symbol.TokenValue());
+        }
+
+        [TestMethod]
+        public void TestSexp()
+        {
+            using var ionXbnfStream = typeof(IonIO).Assembly
+                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+
+            var ionGrammar = new Importer()
+                .ImportGrammar(ionXbnfStream);
+
+            var recognizer = ionGrammar.GetRecognizer("ion-sexp");
+            Assert.IsNotNull(recognizer);
+
+
+            var result = recognizer.Recognize("null.sexp");
+            var success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("null.sexp", success.Symbol.TokenValue());
+
+
+            result = recognizer.Recognize("(abcd + null.bool / 2019T 89.7)");
+            success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("(abcd + null.bool / 2019T 89.7)", success.Symbol.TokenValue());
+        }
+
+        [TestMethod]
+        public void TestBlockComments()
+        {
+            using var ionXbnfStream = typeof(IonIO).Assembly
+                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+
+            var ionGrammar = new Importer()
+                .ImportGrammar(ionXbnfStream);
+
+            var recognizer = ionGrammar.GetRecognizer("block-comment");
+            Assert.IsNotNull(recognizer);
+
+
+            var result = recognizer.Recognize("/* comment here * / */");
+            var success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("/* comment here * / */", success.Symbol.TokenValue());
+        }
+
+        [TestMethod]
+        public void TestLineComments()
+        {
+            using var ionXbnfStream = typeof(IonIO).Assembly
+                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+
+            var ionGrammar = new Importer()
+                .ImportGrammar(ionXbnfStream);
+
+            var recognizer = ionGrammar.GetRecognizer("line-comment");
+            Assert.IsNotNull(recognizer);
+
+
+            var result = recognizer.Recognize("// the comment is here\n");
+            var success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("// the comment is here", success.Symbol.TokenValue());
+        }
+
+        [TestMethod]
+        public void TestBlockSpace()
+        {
+            using var ionXbnfStream = typeof(IonIO).Assembly
+                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+
+            var ionGrammar = new Importer()
+                .ImportGrammar(ionXbnfStream);
+
+            var recognizer = ionGrammar.GetRecognizer("block-space");
+            Assert.IsNotNull(recognizer);
+
+
+            var result = recognizer.Recognize("// the comment is here\n");
+            var success = result as SuccessResult;
+            Assert.IsNotNull(success);
+            Assert.AreEqual("// the comment is here\n", success.Symbol.TokenValue());
         }
     }
 }

@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Axis.Ion", "Axis.Ion\Axis.Ion.csproj", "{71ADBEDF-2BCE-4743-A5A0-196C213DBE0F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".items", ".items", "{37E1CFF6-E6BC-428A-8387-8A65EBF011E2}"
+	ProjectSection(SolutionItems) = preProject
+		TODO.md = TODO.md
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Src", "Src", "{AF4C3D45-4362-4EA9-93D9-A05676737E25}"
 EndProject
@@ -13,7 +16,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{3C9DB90C
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests.Benchmark", "Tests.Benchmark", "{B247E57A-1ED4-451D-9E4F-169865E24E1D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Axis.Ion.Tests", "Axis.Ion.Tests\Axis.Ion.Tests.csproj", "{D4F74C7E-1FFA-45BE-B273-9CB8A7A6FF9D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Axis.Ion.Tests", "Axis.Ion.Tests\Axis.Ion.Tests.csproj", "{D4F74C7E-1FFA-45BE-B273-9CB8A7A6FF9D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
