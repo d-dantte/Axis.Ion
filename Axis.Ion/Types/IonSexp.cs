@@ -42,6 +42,8 @@ namespace Axis.Ion.Types
 
         #region IIonValueType
 
+        public bool IsNull => Value == null;
+
         public bool ValueEquals(IIonValueType<IIonType[]?> other)
             => Value.NullOrTrue(other?.Value, Enumerable.SequenceEqual);
 

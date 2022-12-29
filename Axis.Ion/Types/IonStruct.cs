@@ -46,6 +46,8 @@ namespace Axis.Ion.Types
 
         #region IIonValueType
 
+        public bool IsNull => Value == null;
+
         public bool ValueEquals(IIonValueType<IonStruct.Property[]?> other)
         {
             if (other == null)

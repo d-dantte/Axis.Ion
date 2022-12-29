@@ -13,14 +13,12 @@ This document aims to flesh out the specification for the binary representation 
 8. [Ion-Timestamp](#ion-timestamp)
 9. [Ion-String](#ion-string)
 10. [Ion-Symbol](#ion-symbol)
-	- [Symbol-Table](#symbol-table)
 11. [Ion-Blob](#ion-blob)
 12. [Ion-Clob](#ion-clob)
 13. [Ion-List](#ion-list)
-14. [Ion-Struct](#ion-struct)
-15. [Ion-Sexp](#ion-sexp)
-16. [Ion-Symbol-Value](#ion-symbol-value)
-17. [Apendix](#Apendix)
+14. [Ion-Sexp](#ion-sexp)
+15. [Ion-Struct](#ion-struct)
+16. [Apendix](#Apendix)
 
 
 ## Introduction
@@ -37,7 +35,10 @@ The first 4 bits (index 0 - 3) are reserved to represent actual type identifiers
 for indicating if annotations exist on the value, while the remaining 3 bits (index 5 - 7) are left for each
 type to use as it pleases.
 
-Following the first byte either byte-groups that represent annotations, or the payload for the ion-value
+Following the first byte either byte-groups that represent annotations, or the payload for the ion-value.
+
+
+Note: in the binary notations that follow, a  '.' indicates that the bit in that position is ignored.
 
 
 ## Annotations
@@ -46,17 +47,10 @@ Following the first byte either byte-groups that represent annotations, or the p
 - `[...1-....]`
 
 ### Description
-Annotations are essentially ion symbols. Ion Symbols have a special way they are represented in binary,
-using a symbol table, discussed in the [Ion-Symbol](#Ion-Symbol) section.
-
 Annotations are not actual ion types, they exist to decorate ion values. When present, a bit in the
-type-metadata is flipped on. When this happens, the next 4 bytes after the type-metadata represents the
-_annotation count_: an integer indicating how many annotations are present on the value. 
-Being ion symbols, the actual annotations on the ion value are themselves represented as integer 
-ids pointing into the [symbol table](#Symbol-Table); these ids immediately follow the annotation-count byte.
-
-Note: in the binary notations that follow, a  '.' indicates that the bit in that position is ignored.
-
+type-metadata is flipped on. When this happens, the next byte(s) after the type-metadata represents the
+_annotation count_: a [`var-byte`](#var-byte) indicating how many annotations are present on the value;
+each annotation itself being a symbol (quoted/identifier). 
 
 ## Ion-Null
 
@@ -220,19 +214,110 @@ and is represented as a `var-byte`.
 
 ### Custom-Metadata
 - null: `[..1.-1000]`
+- operator: `[01..-1000]`
+- quoted symbol: `[10..-1000]`
+- identifier: `[11..-1000]`
 
 ### Description
-Symbols are stored with a fixed number of bytes: 1 for the type-metadata, 4 for the symbol id, making a total of 5.
-The symbol id is a pointer into the symbol-table.
-
-#### Symbol-Table
-A symbol table is a key-value-pair construct found at the start of every ion binary data, represented by the `0` byte
-`[0000-0000]`. The following lists the format for the symbol table:
-1. Indicator byte (`[0000-0000]`).
-2. Table entry count: a `var-byte` representing the number of entries in the table.
-4. Entry Data*: [symbol value](#ion-symbol-value)
+Symbols in binary have 3 states (listed in the custom-metadata section).
+1. Operand: In this form, the operator symbol is represented by a single byte. There are a total of 19 operator symbols
+   supported by ion. Each one is represented by it's ordinal value:
+   1.  Exclamation
+   2.  Hash       
+   3.  Percent    
+   4.  Ampersand  
+   5.  Star       
+   6.  Plus       
+   7.  Minus      
+   8.  Dot        
+   9.  FSlash     
+   10. SColon     
+   11. Less       
+   12. Equals     
+   13. Greater    
+   14. QMark      
+   15. At         
+   16. Caret      
+   17. BTick      
+   18. Pipe       
+   19. Tilde    
+2. Quoted symbol: In this form, following the type-metadata is a series of `var-bytes` that represent the number of
+   unicode characters present in the symbol. Beyond the count, are the bytes for the unicode characters.
+3. Identifier: Similar to `quoted symbol` except for allowing only a limited set of characters.
+   See [here](https://amazon-ion.github.io/ion-docs/docs/spec.html#symbol).
 	
 
+## Ion Blob
+
+### Type-Metadata
+- `[....-1001]`
+- 9 (dec)
+- 0x9 (hex)
+
+### Custom-Metadata
+- null: `[..1.-1001]`
+
+### Description
+Regular variable byte stream. Following the type-metadata, `var-byte` values that represent the number of expected bytes.
+Following the `var-bytes` are the actual byte array
+	
+
+## Ion Clob
+
+### Type-Metadata
+- `[....-1010]`
+- 10 (dec)
+- 0xA (hex)
+
+### Custom-Metadata
+- null: `[..1.-1010]`
+
+### Description
+Same as [ion-blob](#ion-blob) above, except that the bytes represent unicode characters.
+
+
+## Ion List
+
+### Type-Metadata
+- `[....-1011]`
+- 11 (dec)
+- 0xB (hex)
+
+### Custom-Metadata
+- null: `[..1.-1011]`
+
+### Description
+The list is similar to the [ion-blob](#ion-blob), except that the `var-byte` count represents number of items in the list.
+Each item is an ion-value.
+
+
+## Ion Sexp
+
+### Type-Metadata
+- `[....-1100]`
+- 12 (dec)
+- 0xC (hex)
+
+### Custom-Metadata
+- null: `[..1.-1100]`
+
+### Description
+The sexp is exactly the same as to the [ion-list](#ion-list), except that operand symbols are also allowed as items.
+
+
+## Ion Struct
+
+### Type-Metadata
+- `[....-1101]`
+- 13 (dec)
+- 0xD (hex)
+
+### Custom-Metadata
+- null: `[..1.-1101]`
+
+### Description
+The list is similar to the [ion-list](#ion-list); that the `var-byte` count represents number of entries in the struct.
+Each entry is a key-value pair, with the key being either a quoted symbol, or an identifier, immediately followed by an ion-value.
 
 
 

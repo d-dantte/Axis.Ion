@@ -3,6 +3,7 @@ using Axis.Ion.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using static Axis.Ion.Types.IIonType;
 
@@ -74,5 +75,64 @@ namespace Axis.Ion
         public static string AsString(this char[] charArray) => new string(charArray);
 
         public static string AsString(this IEnumerable<char> charArray) => new string(charArray.ToArray());
+
+        public static void Repeat(this int repetitions, Action action)
+        {
+            repetitions = Math.Abs(repetitions);
+            for(int cnt = 0; cnt < repetitions; cnt++)
+            {
+                action.Invoke();
+            }
+        }
+
+        public static void Repeat(this
+            BigInteger repetitions,
+            Action action)
+        {
+            if (repetitions <= int.MaxValue)
+            {
+                var intRepetitions = (int)repetitions;
+                for (int cnt = 0; cnt < intRepetitions; cnt++)
+                    action.Invoke();
+
+                return;
+            }
+
+            if (repetitions <= long.MaxValue)
+            {
+                var longRepetitions = (long)repetitions;
+                for (long cnt = 0; cnt < longRepetitions; cnt++)
+                    action.Invoke();
+
+                return;
+            }
+
+            for (BigInteger cnt = 0; cnt < repetitions; cnt++)
+                action.Invoke();
+
+            return;
+        }
+
+        public static IEnumerable<TOut> RepeatApply<TOut>(
+            this BigInteger repetitions,
+            Func<BigInteger, TOut> map)
+        {
+            if (map == null)
+                throw new ArgumentNullException(nameof(map));
+
+            for (BigInteger cnt = 0; cnt < repetitions; cnt++)
+                yield return map.Invoke(cnt);
+        }
+
+        public static IEnumerable<TOut> RepeatApply<TOut>(
+            this int repetitions,
+            Func<int, TOut> map)
+        {
+            if (map == null)
+                throw new ArgumentNullException(nameof(map));
+
+            for (int cnt = 0; cnt < repetitions; cnt++)
+                yield return map.Invoke(cnt);
+        }
     }
 }

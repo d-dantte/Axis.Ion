@@ -1,6 +1,7 @@
 using Axis.Ion.Types;
 using Axis.Luna.Common.Utils;
 using Axis.Luna.Extensions;
+using System.Numerics;
 using System.Text;
 
 namespace Axis.Ion.Tests
@@ -226,7 +227,7 @@ namespace Axis.Ion.Tests
                     break;
 
                 case IonTypes.Int:
-                    IonInt ii = (long?)value;
+                    IonInt ii = (BigInteger?)value;
                     ion = ii;
                     break;
 
@@ -312,7 +313,7 @@ namespace Axis.Ion.Tests
             {
                 IonTypes.Null => new IonNull(annotations),
                 IonTypes.Bool => new IonBool(value as bool?, annotations),
-                IonTypes.Int => new IonInt(value as long?, annotations),
+                IonTypes.Int => new IonInt(value as BigInteger?, annotations),
                 IonTypes.Float => new IonFloat(value as double?, annotations),
                 IonTypes.Decimal => new IonDecimal(value as decimal?, annotations),
                 IonTypes.Timestamp => new IonTimestamp(value as DateTimeOffset?, annotations),
@@ -339,11 +340,11 @@ namespace Axis.Ion.Tests
             {
                 IonTypes.Null => IIonType.OfNull(annotations),
                 IonTypes.Bool => IIonType.Of(value as bool?, annotations),
-                IonTypes.Int => IIonType.Of(value as long?, annotations),
+                IonTypes.Int => IIonType.Of(value as BigInteger?, annotations),
                 IonTypes.Float => IIonType.Of(value as double?, annotations),
                 IonTypes.Decimal => IIonType.Of(value as decimal?, annotations),
                 IonTypes.Timestamp => IIonType.Of(value as DateTimeOffset?, annotations),
-                IonTypes.String => IIonType.Of(value as string, annotations),
+                IonTypes.String => IIonType.OfString(value as string, annotations),
                 IonTypes.Symbol =>
                     value is null ? new IIonSymbol.Identifier(null, annotations) :
                     value is IIonSymbol.Operators[] ops ? new IIonSymbol.Operator(ops, annotations) :
@@ -444,7 +445,7 @@ namespace Axis.Ion.Tests
             {
                 IonTypes.Null => null,
                 IonTypes.Bool => SecureRandom.NextBool(),
-                IonTypes.Int => SecureRandom.NextSignedLong(),
+                IonTypes.Int => (BigInteger)SecureRandom.NextSignedLong(),
                 IonTypes.Float => SecureRandom.NextSignedDouble(),
                 IonTypes.Decimal => Convert.ToDecimal(SecureRandom.NextSignedLong()/2D),
                 IonTypes.Timestamp => DateTimeOffset.Now + TimeSpan.FromMilliseconds(SecureRandom.NextSignedInt()),

@@ -23,6 +23,8 @@ namespace Axis.Ion.Types
 
         #region IIonType
 
+        public bool IsNull => Value == null;
+
         public bool ValueEquals(IIonValueType<string?> other) => Value.NullOrEquals(other?.Value);
 
         public string ToIonText()

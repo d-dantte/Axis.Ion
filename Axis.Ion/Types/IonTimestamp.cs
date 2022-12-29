@@ -25,6 +25,8 @@ namespace Axis.Ion.Types
 
         #region IIonType
 
+        public bool IsNull => Value == null;
+
         public bool ValueEquals(IIonValueType<DateTimeOffset?> other) => Value == other?.Value == true;
 
         public string ToIonText() => Value?.ToString(_Format) ?? "null.timestamp";

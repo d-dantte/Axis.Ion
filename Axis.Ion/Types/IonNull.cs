@@ -20,6 +20,8 @@ namespace Axis.Ion.Types
 
         #region IIonType
 
+        public bool IsNull => true;
+
         public string ToIonText() => "null.null";
 
         #endregion

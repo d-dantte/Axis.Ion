@@ -24,6 +24,8 @@ namespace Axis.Ion.Types
 
         #region IIonType
 
+        public bool IsNull => Value == null;
+
         public bool ValueEquals(IIonValueType<double?> other) => Value == other?.Value == true;
 
         public string ToIonText() => Value != null 

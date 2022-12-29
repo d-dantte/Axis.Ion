@@ -1,24 +1,27 @@
 ﻿using Axis.Luna.Extensions;
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 
 namespace Axis.Ion.Types
 {
     public enum IonTypes
     {
-        Null,
+        Null = 1,
         Bool,
         Int,
-        Float,
         Decimal,
+        Float,
         Timestamp,
         String,
-        Symbol,
+        OperatorSymbol,
+        IdentifierSymbol,
+        QuotedSymbol,
         Blob,
         Clob,
-        Struct,
         List,
-        Sexp
+        Sexp,
+        Struct
     }
 
     public interface IIonType
@@ -72,6 +75,13 @@ namespace Axis.Ion.Types
         /// </summary>
         /// <param name="initializer"></param>
         /// <returns></returns>
+        public static IIonType Of(BigInteger? value, params IIonType.Annotation[] annotations) => new IonInt(value, annotations);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="initializer"></param>
+        /// <returns></returns>
         public static IIonType Of(double? value, params IIonType.Annotation[] annotations) => new IonFloat(value, annotations);
 
         /// <summary>
@@ -93,7 +103,7 @@ namespace Axis.Ion.Types
         /// </summary>
         /// <param name="initializer"></param>
         /// <returns></returns>
-        public static IIonType Of(string? value, params IIonType.Annotation[] annotations) => new IonString(value, annotations);
+        public static IIonType OfString(string? value, params IIonType.Annotation[] annotations) => new IonString(value, annotations);
 
         /// <summary>
         /// 
@@ -124,26 +134,63 @@ namespace Axis.Ion.Types
         public static IIonType OfClob(byte[]? value, params IIonType.Annotation[] annotations) => new IonClob(value, annotations);
         #endregion
 
-        #region Members
+        #region NullOf
 
         /// <summary>
         /// 
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="annotations"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        public static IIonType NullOf(IonTypes type, params Annotation[] annotations)
+        {
+            return type switch
+            {
+                IonTypes.Null => new IonNull(annotations),
+                IonTypes.Bool => new IonBool(null, annotations),
+                IonTypes.Int => new IonInt(null, annotations),
+                IonTypes.Decimal => new IonDecimal(null, annotations),
+                IonTypes.Float => new IonFloat(null, annotations),
+                IonTypes.Timestamp => new IonTimestamp(null, annotations),
+                IonTypes.String => new IonString(null, annotations),
+                IonTypes.OperatorSymbol => new IIonSymbol.Operator(null, annotations),
+                IonTypes.IdentifierSymbol => new IIonSymbol.Identifier(null, annotations),
+                IonTypes.QuotedSymbol => new IIonSymbol.QuotedSymbol(null, annotations),
+                IonTypes.Blob => new IonBlob(null, annotations),
+                IonTypes.Clob => new IonClob(null, annotations),
+                IonTypes.List => new IonList(annotations),
+                IonTypes.Sexp => new IonSexp(annotations),
+                IonTypes.Struct => new IonStruct(annotations),
+                _ => throw new ArgumentException($"Invalid {typeof(IonTypes)} value: {type}")
+            };
+        }
+        #endregion
+
+        #region Members
+
+        /// <summary>
+        /// Indicating if the value is null (default).
+        /// </summary>
+        bool IsNull { get; }
+
+        /// <summary>
+        /// The <see cref="IonTypes"/>
         /// </summary>
         IonTypes Type { get; }
 
         /// <summary>
-        /// 
+        /// The annotation list
         /// </summary>
         Annotation[] Annotations { get; }
 
         /// <summary>
-        /// 
+        /// The textual representation of this value
         /// </summary>
         /// <returns></returns>
         string ToIonText();
 
         #endregion
-
 
         #region Nested types
 
@@ -157,6 +204,16 @@ namespace Axis.Ion.Types
             internal Annotation(string value)
             {
                 Value = value;
+            }
+
+            public Annotation(IIonSymbol? symbol)
+            {
+                if (symbol is IIonSymbol.Operator 
+                    || symbol is null
+                    || symbol.IsNull)
+                    throw new ArgumentException("Invalid symbol");
+
+                Value = symbol.ToIonText();
             }
 
             public override int GetHashCode() => HashCode.Combine(Value);
@@ -176,6 +233,10 @@ namespace Axis.Ion.Types
 
 
             public static implicit operator Annotation(string annotation) => Parse(annotation);
+
+            public static implicit operator Annotation(IIonSymbol.Identifier symbol) => new Annotation(symbol);
+
+            public static implicit operator Annotation(IIonSymbol.QuotedSymbol symbol) => new Annotation(symbol);
 
             #region Parse
             public static bool TryParse(string @string, out Annotation annotation)

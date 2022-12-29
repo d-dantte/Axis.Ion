@@ -1,21 +1,32 @@
 ﻿using Axis.Luna.Extensions;
 using System;
 using System.Linq;
+using System.Numerics;
 using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
-    public readonly struct IonInt : IIonValueType<long?>
+    /// <summary>
+    /// TODO: replace long? with BigInteger?
+    /// </summary>
+    public readonly struct IonInt : IIonValueType<BigInteger?>
     {
         private readonly IIonType.Annotation[] _annotations;
 
-        public long? Value { get; }
+        public BigInteger? Value { get; }
 
         public IonTypes Type => IonTypes.Int;
 
         public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
 
-        internal IonInt(long? value, params IIonType.Annotation[] annotations)
+        internal IonInt(
+            long? value,
+            params IIonType.Annotation[] annotations)
+            : this((BigInteger?)value, annotations)
+        {
+        }
+
+        internal IonInt(BigInteger? value, params IIonType.Annotation[] annotations)
         {
             Value = value;
             _annotations = annotations.Validate();
@@ -23,7 +34,9 @@ namespace Axis.Ion.Types
 
         #region IIonType
 
-        public bool ValueEquals(IIonValueType<long?> other) => Value == other?.Value == true;
+        public bool IsNull => Value == null;
+
+        public bool ValueEquals(IIonValueType<BigInteger?> other) => Value == other?.Value == true;
 
         public string ToIonText() => Value?.ToString() ?? "null.int";
 
@@ -53,5 +66,7 @@ namespace Axis.Ion.Types
         #endregion
 
         public static implicit operator IonInt(long? value) => new IonInt(value);
+
+        public static implicit operator IonInt(BigInteger? value) => new IonInt(value);
     }
 }

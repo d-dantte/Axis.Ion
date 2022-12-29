@@ -19,4 +19,8 @@
     <PackageReference Include="Axis.Pulsar.Languages" Version="0.7.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="IO\Text\" />
+  </ItemGroup>
+
 </Project>

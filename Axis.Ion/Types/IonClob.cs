@@ -29,6 +29,8 @@ namespace Axis.Ion.Types
 
         #region IIonType
 
+        public bool IsNull => Value == null;
+
         public bool ValueEquals(IIonValueType<byte[]?> other)
             => other.Value.NullOrTrue(Value, Enumerable.SequenceEqual);
 
