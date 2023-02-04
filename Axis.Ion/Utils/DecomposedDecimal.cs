@@ -1,9 +1,11 @@
 ﻿using Axis.Luna.Extensions;
 using System;
+using System.Text.RegularExpressions;
 
 namespace Axis.Ion.Utils
 {
-    public struct DecomposedDecimal
+    [Obsolete]
+    public struct DecomposedDecimal2
     {
         public enum NumericSign
         {
@@ -25,22 +27,22 @@ namespace Axis.Ion.Utils
         public NumericSign Sign { get; }
 
 
-        public DecomposedDecimal(float value)
+        public DecomposedDecimal2(float value)
             :this(DoubleConverter.ToExactString(value))
         {
         }
 
-        public DecomposedDecimal(double value)
+        public DecomposedDecimal2(double value)
             : this(DoubleConverter.ToExactString(value))
         {
         }
 
-        public DecomposedDecimal(decimal value)
+        public DecomposedDecimal2(decimal value)
             : this(value.ToString())
         {
         }
 
-        private DecomposedDecimal(string value)
+        private DecomposedDecimal2(string value)
         {
             var parts = value.Split('-', '.');
 
@@ -86,7 +88,7 @@ namespace Axis.Ion.Utils
             int exponent;
             string exponentSign;
 
-            if(firstSig == lastSig)
+            if (firstSig == lastSig)
             {
                 mantissa = "0";
 
@@ -143,6 +145,153 @@ namespace Axis.Ion.Utils
             }
 
             return (first, last, diff);
+        }
+    }
+
+    public struct DecomposedDecimal
+    {
+        private static readonly Regex DecimalPattern = new Regex(@"\-?\d+(.\d+)?");
+
+        public enum NumericSign
+        {
+            Positive,
+            Negative
+        }
+
+        private readonly string? _significantDigits;
+        private readonly int _exponent;
+        private readonly NumericSign _sign;
+
+        public DecomposedDecimal(double value)
+            : this(DoubleConverter.ToExactString(value))
+        {
+        }
+
+        public DecomposedDecimal(decimal value)
+            :this(value.ToString())
+        {
+        }
+
+        public DecomposedDecimal(string value)
+        {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            if (!DecimalPattern.IsMatch(value))
+                throw new ArgumentException($"invalid decimal value: {value}");
+
+            _sign = value.StartsWith("-")
+                ? NumericSign.Negative
+                : NumericSign.Positive;
+
+            var trimmed = _sign switch
+            {
+                NumericSign.Positive => TrimZeros(value),
+                NumericSign.Negative => TrimZeros(value[1..]),
+                _ => throw new InvalidOperationException($"Invalid sign: {_sign}")
+            };
+
+            var pointIndex = trimmed.IndexOf('.');
+
+            (_significantDigits, var significantIndex) = ExtractSignificantDigits(trimmed.Replace(".", ""));
+
+            _exponent = significantIndex >= pointIndex
+                ? -significantIndex
+                : pointIndex - 1; 
+        }
+
+        public string ToScientificNotation(int maxPrecision = 17)
+        {
+            if (_significantDigits is null)
+                return $"{SignText()}0.0E0";
+
+            var text = _significantDigits.Length > maxPrecision
+                ? _significantDigits[..maxPrecision]
+                : _significantDigits;
+
+            text = text.TrimEnd('0');
+
+            if (text.Length == 1)
+                text = $"{text}0";
+
+            return $"{SignText()}{text.Insert(1, ".")}E{_exponent}";
+        }
+
+        private string SignText() => _sign switch
+        {
+            NumericSign.Positive => "",
+            NumericSign.Negative => "-",
+            _ => throw new ArgumentException($"Invalid sign: {(char)_sign}")
+        };
+
+        private static string TrimStartZeros(string value)
+        {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            if (string.IsNullOrWhiteSpace(value))
+                return "0.0";
+
+            if ("0".Equals(value) || "0.0".Equals(value))
+                return "0.0";
+
+            if (value.StartsWith("0."))
+                return value;
+
+            var trimmed = value.TrimStart("0");
+
+            if (trimmed.Length == 0)
+                return "0.0";
+
+            if (trimmed.StartsWith("."))
+                return $"0{trimmed}";
+
+            return trimmed;
+        }
+
+        private static string TrimEndZeros(string value)
+        {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            if (string.IsNullOrWhiteSpace(value))
+                return "0.0";
+
+            if ("0.0".Equals(value))
+                return value;
+
+            if (!value.Contains("."))
+                return $"{value}.0";
+
+            return value.TrimEnd('0');
+        }
+
+        private static string TrimZeros(string value)
+        {
+            return TrimEndZeros(TrimStartZeros(value));
+        }
+
+        private static (string? significantDigits, int significantIndex) ExtractSignificantDigits(string textValue)
+        {
+            if ("00".Equals(textValue))
+                return (null, 0);
+
+            var significantStartIndex = 0;
+            for (; significantStartIndex < textValue.Length; significantStartIndex++)
+            {
+                if (textValue[significantStartIndex] != '0')
+                    break;
+            }
+
+            var significantEndIndex = textValue.Length - 1;
+            for (; significantEndIndex >= 0; significantEndIndex--)
+            {
+                if (textValue[significantEndIndex] != '0')
+                    break;
+            }
+
+            var count = (significantEndIndex - significantStartIndex) + 1;
+            return (textValue.Substring(significantStartIndex, count), significantStartIndex);
         }
     }
 }

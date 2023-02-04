@@ -1,7 +1,6 @@
 ﻿using Axis.Luna.Extensions;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
 
 namespace Axis.Ion.Types
 {
@@ -26,123 +25,15 @@ namespace Axis.Ion.Types
 
     public interface IIonType
     {
-        #region Of
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initializer"></param>
-        /// <returns></returns>
-        public static IIonType OfNull(params IIonType.Annotation[] annotations) => new IonNull(annotations);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initializer"></param>
-        /// <returns></returns>
-        public static IIonType Of(IonStruct.Initializer? initializer) => new IonStruct(initializer);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initializer"></param>
-        /// <returns></returns>
-        public static IIonType Of(IonList.Initializer? initializer) => new IonList(initializer);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initializer"></param>
-        /// <returns></returns>
-        public static IIonType Of(IonSexp.Initializer? initializer) => new IonSexp(initializer);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initializer"></param>
-        /// <returns></returns>
-        public static IIonType Of(bool? value, params IIonType.Annotation[] annotations) => new IonBool(value, annotations);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initializer"></param>
-        /// <returns></returns>
-        public static IIonType Of(long? value, params IIonType.Annotation[] annotations) => new IonInt(value, annotations);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initializer"></param>
-        /// <returns></returns>
-        public static IIonType Of(BigInteger? value, params IIonType.Annotation[] annotations) => new IonInt(value, annotations);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initializer"></param>
-        /// <returns></returns>
-        public static IIonType Of(double? value, params IIonType.Annotation[] annotations) => new IonFloat(value, annotations);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initializer"></param>
-        /// <returns></returns>
-        public static IIonType Of(decimal? value, params IIonType.Annotation[] annotations) => new IonDecimal(value, annotations);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initializer"></param>
-        /// <returns></returns>
-        public static IIonType Of(DateTimeOffset? value, params IIonType.Annotation[] annotations) => new IonTimestamp(value, annotations);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initializer"></param>
-        /// <returns></returns>
-        public static IIonType OfString(string? value, params IIonType.Annotation[] annotations) => new IonString(value, annotations);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initializer"></param>
-        /// <returns></returns>
-        public static IIonType OfSymbol(string? value, params IIonType.Annotation[] annotations) => IIonSymbol.Of(value, annotations);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initializer"></param>
-        /// <returns></returns>
-        public static IIonType OfSymbol(IIonSymbol.Operators[] value, params IIonType.Annotation[] annotations) => IIonSymbol.OfOperator(value, annotations);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initializer"></param>
-        /// <returns></returns>
-        public static IIonType OfBlob(byte[]? value, params IIonType.Annotation[] annotations) => new IonBlob(value, annotations);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="initializer"></param>
-        /// <returns></returns>
-        public static IIonType OfClob(byte[]? value, params IIonType.Annotation[] annotations) => new IonClob(value, annotations);
-        #endregion
-
         #region NullOf
 
         /// <summary>
-        /// 
+        /// Creates null values for the given <see cref="IonTypes"/>, and annotations
         /// </summary>
-        /// <param name="type"></param>
-        /// <param name="annotations"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentException"></exception>
+        /// <param name="type">The ion type</param>
+        /// <param name="annotations">The list of annotations</param>
+        /// <returns>The null value</returns>
+        /// <exception cref="ArgumentException">If the ion type is invalid</exception>
         public static IIonType NullOf(IonTypes type, params Annotation[] annotations)
         {
             return type switch
@@ -154,9 +45,9 @@ namespace Axis.Ion.Types
                 IonTypes.Float => new IonFloat(null, annotations),
                 IonTypes.Timestamp => new IonTimestamp(null, annotations),
                 IonTypes.String => new IonString(null, annotations),
-                IonTypes.OperatorSymbol => new IIonSymbol.Operator(null, annotations),
-                IonTypes.IdentifierSymbol => new IIonSymbol.Identifier(null, annotations),
-                IonTypes.QuotedSymbol => new IIonSymbol.QuotedSymbol(null, annotations),
+                IonTypes.OperatorSymbol => new IonOperator(null, annotations),
+                IonTypes.IdentifierSymbol => new IonIdentifier(null, annotations),
+                IonTypes.QuotedSymbol => new IonQuotedSymbol(null, annotations),
                 IonTypes.Blob => new IonBlob(null, annotations),
                 IonTypes.Clob => new IonClob(null, annotations),
                 IonTypes.List => new IonList(annotations),
@@ -170,14 +61,14 @@ namespace Axis.Ion.Types
         #region Members
 
         /// <summary>
-        /// Indicating if the value is null (default).
-        /// </summary>
-        bool IsNull { get; }
-
-        /// <summary>
         /// The <see cref="IonTypes"/>
         /// </summary>
         IonTypes Type { get; }
+
+        /// <summary>
+        /// Indicating if the value is null (default).
+        /// </summary>
+        bool IsNull { get; }
 
         /// <summary>
         /// The annotation list
@@ -194,26 +85,39 @@ namespace Axis.Ion.Types
 
         #region Nested types
 
-        /// <summary>
-        /// 
-        /// </summary>
         public readonly struct Annotation
         {
             public string Value { get; }
 
             internal Annotation(string value)
             {
-                Value = value;
+                Value = value.ThrowIf(
+                    string.IsNullOrWhiteSpace,
+                    new ArgumentException(nameof(value)));
             }
 
-            public Annotation(IIonSymbol? symbol)
+            public Annotation(IonIdentifier symbol)
             {
-                if (symbol is IIonSymbol.Operator 
-                    || symbol is null
-                    || symbol.IsNull)
+                if (symbol.IsNull)
                     throw new ArgumentException("Invalid symbol");
 
                 Value = symbol.ToIonText();
+            }
+
+            public Annotation(IonQuotedSymbol symbol)
+            {
+                if (symbol.IsNull)
+                    throw new ArgumentException("Invalid symbol");
+
+                Value = symbol.ToIonText();
+            }
+
+            public IIonTextSymbol ToSymbol()
+            {
+                if (Value.StartsWith("'"))
+                    return IonQuotedSymbol.Parse(Value);
+
+                else return IonIdentifier.Parse(Value);
             }
 
             public override int GetHashCode() => HashCode.Combine(Value);
@@ -234,27 +138,23 @@ namespace Axis.Ion.Types
 
             public static implicit operator Annotation(string annotation) => Parse(annotation);
 
-            public static implicit operator Annotation(IIonSymbol.Identifier symbol) => new Annotation(symbol);
+            public static implicit operator Annotation(IonIdentifier symbol) => new Annotation(symbol);
 
-            public static implicit operator Annotation(IIonSymbol.QuotedSymbol symbol) => new Annotation(symbol);
+            public static implicit operator Annotation(IonQuotedSymbol symbol) => new Annotation(symbol);
 
             #region Parse
             public static bool TryParse(string @string, out Annotation annotation)
             {
-                var normalized = @string?.TrimEnd("::") ?? "";
-                if (IIonSymbol.QuotedSymbol.TryParse(normalized, out var quoted))
-                {
-                    annotation = new Annotation(quoted.ToIonText());
-                    return true;
-                }
-
-                if(IIonSymbol.Identifier.TryParse(normalized, out var identifier))
-                {
-                    annotation = new Annotation(identifier.ToIonText());
-                    return true;
-                }
-
                 annotation = default;
+                var normalized = @string?.TrimEnd("::") ?? "";
+                if (IIonTextSymbol.TryParse(normalized, out var symbol))
+                {
+                    if (symbol == null)
+                        return false;
+
+                    annotation = new Annotation(symbol.ToIonText());
+                    return true;
+                }
                 return false;
             }
 

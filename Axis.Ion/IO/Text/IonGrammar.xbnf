@@ -7,8 +7,11 @@
 $ion -> +[$block-space.? $ion-value +[$block-space $ion-value].* EOF]
 
 # Ion Value
-$ion-value -> +[$annotation-list.? $value]
-$value -> ?[$ion-clob $ion-blob $ion-struct $ion-list $ion-sexp $ion-string $ion-bool $ion-timestamp $ion-float $ion-decimal $ion-int $ion-symbol $ion-null]
+$ion-value -> ?[
+	$ion-clob $ion-blob $ion-struct $ion-list
+	$ion-sexp $ion-string $ion-bool $ion-timestamp
+	$ion-float $ion-decimal $ion-int $ion-symbol
+	$ion-null]
 
 # Annotation
 $annotation-list -> +[$annotation $annotation-separator].+
@@ -17,29 +20,29 @@ $annotation-separator -> "::"
 
 
 # null
-$ion-null -> ?[$null-null $null]
+$ion-null -> +[$annotation-list.? ?[$null-null $null]]
 $null-null -> "null.null"
 $null -> "null"
 
 
 # Bool
 # NOTE: single-quoted strings ignore case.
-$ion-bool -> ?[$null-bool $true-bool $false-bool]
+$ion-bool -> +[$annotation-list.? ?[$null-bool $true-bool $false-bool]]
 $null-bool -> "null.bool"
 $true-bool -> 'true'
 $false-bool -> 'false'
 
 
 # Int
-$ion-int -> ?[$null-int $binary-int $hex-int $regular-int]
+$ion-int -> +[$annotation-list.? ?[$null-int $binary-int $hex-int $regular-int]]
 $null-int -> "null.int"
-$binary-int -> /^-?0b[01](_?[01])*$/.4,+
-$hex-int -> /^-?0x[0-9A-Fa-f](_?[0-9A-Fa-f])*$/.4,+
+$binary-int -> /^0[bB][01](_?[01])*$/.3,+
+$hex-int -> /^0[xX][0-9A-Fa-f](_?[0-9A-Fa-f])*$/.3,+
 $regular-int -> /^-?\d(_?\d)*$/.2,+
 
 
 # Float
-$ion-float -> ?[$null-float $nan $pinf $ninf $scientific-float]
+$ion-float -> +[$annotation-list.? ?[$null-float $nan $pinf $ninf $scientific-float]]
 $null-float -> "null.float"
 $nan -> "nan"
 $pinf -> "+inf"
@@ -51,7 +54,7 @@ $fractional-digits -> /^\d(_?\d)*$/.2,+
 
 
 # Decimal
-$ion-decimal -> ?[$null-decimal $scientific-decimal $regular-decimal]
+$ion-decimal -> +[$annotation-list.? ?[$null-decimal $scientific-decimal $regular-decimal]]
 $null-decimal -> "null.decimal"
 $regular-decimal -> /^-?\d(_?\d)*\.(\d(_?\d)*)?$/.2,+
 $scientific-decimal -> +[$regular-int ?[+[$dot +[$fractional-digits $decimal-exponent.?].?] $decimal-exponent]]
@@ -62,9 +65,15 @@ $decimal-exponent-delimiter -> 'D'
 # Timestamp
 # NOTE: Investigate using recognition thresholds to stop shorter permissions from greedily recognizing failed subsets of
 # longer presisions. e.g, '2007-02-23T20:14:33.Z' should fail, but is greedily recognized as a 'day-precision'
-$ion-timestamp -> ?[$null-timestamp $millisecond-precision $second-precision $minute-precision $day-precision $month-precision $year-precision]
+$ion-timestamp -> +[$annotation-list.? ?[
+	$null-timestamp $millisecond-precision $second-precision
+	$minute-precision $day-precision $month-precision
+	$year-precision]]
 $null-timestamp -> "null.timestamp"
-$millisecond-precision -> +[$year $minus $month $minus $day $date-delimiter $hour $colon $minute $colon $second $dot $millisecond $time-zone-offset]>12
+$millisecond-precision -> +[
+	$year $minus $month $minus $day $date-delimiter
+	$hour $colon $minute $colon $second $dot
+	$millisecond $time-zone-offset]>12
 $second-precision -> +[$year $minus $month $minus $day $date-delimiter $hour $colon $minute $colon $second $time-zone-offset]>10
 $minute-precision -> +[$year $minus $month $minus $day $date-delimiter $hour $colon $minute $time-zone-offset]>7
 $day-precision -> +[$year $minus $month $minus $day $date-delimiter.?]
@@ -84,53 +93,56 @@ $millisecond -> /^\d+$/
 
 
 # String
-$ion-string -> ?[$null-string $regular-string $multiline-string]
+$ion-string -> +[$annotation-list.? ?[$null-string $singleline-string $multiline-string]]
 $null-string -> "null.string"
-$regular-string -> @DQD-String
-$multiline-string -> +[$l-parantheses +[$block-space.? $ml-string].+ $block-space.? $r-parantheses]
-$ml-string -> +[$s-quote.2 @SQD-String $s-quote.2]
+$singleline-string -> @Singleline-DQDString
+$multiline-string -> +[$block-space.? $ml-string].+
+$ml-string -> @Multiline-3SQDString
 
 
 # Symbols
-$ion-symbol -> ?[$null-symbol $quoted-symbol $operator-symbol $identifier]
+$ion-symbol -> +[$annotation-list.? ?[$null-symbol $quoted-symbol $operator-symbol $identifier]]
 $null-symbol -> "null.symbol"
-$quoted-symbol -> @SQD-String
-$operator-symbol -> ?[$exclamation $hash $percent $ampersand $star $plus $minus $dot $f-slash $s-colon $less $equals $greater $q-mark $at $caret $b-tick $pipe $tilde].+
+$quoted-symbol -> @Singleline-SQDString
+$operator-symbol -> ?[
+	$exclamation $hash $percent $ampersand $star $plus $minus
+	$dot $f-slash $s-colon $less $equals $greater $q-mark $at
+	$caret $b-tick $pipe $tilde].+
 $identifier -> /^[a-zA-Z_\\$][a-zA-Z0-9_\\$]*$/
 
 
 # Blob
-$ion-blob -> ?[$null-blob $blob-value]
+$ion-blob -> +[$annotation-list.? ?[$null-blob $blob-value]]
 $null-blob -> "null.blob"
 $blob-value -> +[$l-brace.2 $char-space.+ $base-64 $char-space.+ $r-brace.2]
 $base-64 -> /^[A-Za-z0-9+//]+={0,2}$/
 
 
 # Clob
-$ion-clob -> ?[$null-clob $clob-value]
+$ion-clob -> +[$annotation-list.? ?[$null-clob $clob-value]]
 $null-clob -> "null.clob"
-$clob-value -> +[$l-brace.2 $char-space.+ ?[$regular-string $clob-ml-string] $char-space.+ $r-brace.2]
-$clob-ml-string -> +[$char-space.* $ml-string].+
+$clob-value -> +[$l-brace.2 $char-space.+ ?[$singleline-string $clob-multiline-string] $char-space.+ $r-brace.2]
+$clob-multiline-string -> +[$char-space.* $ml-string].+
 
 
 # List
-$ion-list -> ?[$null-list $list-value]
+$ion-list -> +[$annotation-list.? ?[$null-list $list-value]]
 $null-list -> "null.list"
 $list-value -> +[$l-bracket +[$block-space.? $ion-value +[$block-space.? $comma $block-space.? $ion-value].*].? $block-space.? $r-bracket]
 
 
 # Sexp
 # NOTE: investigate if sexp's allow comments.
-$ion-sexp -> ?[$null-sexp $sexp-value]
+$ion-sexp -> +[$annotation-list.? ?[$null-sexp $sexp-value]]
 $null-sexp -> "null.sexp"
 $sexp-value -> +[$l-parantheses +[$block-space.* $ion-value].+ $block-space.* $r-parantheses]
 
 
 # Struct
-$ion-struct -> ?[$null-struct $struct-value]
+$ion-struct -> +[$annotation-list.? ?[$null-struct $struct-value]]
 $null-struct -> "null.struct"
 $struct-value -> +[$l-brace +[$block-space.? $struct-field +[$block-space.? $comma $block-space $struct-field].*].? $block-space.? $r-brace]
-$struct-field -> +[?[$regular-string $quoted-symbol $identifier] $block-space.? $colon $block-space.? $ion-value]
+$struct-field -> +[?[$singleline-string $quoted-symbol $identifier] $block-space.? $colon $block-space.? $ion-value]
 
 
 # Spaces
@@ -150,7 +162,7 @@ $line-comment-content -> /^[^\r\n]*\z/
 
 
 # General terminals
-$s-quote -> "'"
+# $s-quote -> "'"
 #$d-quote -> '"'
 $exclamation -> '!'
 $hash -> '#'

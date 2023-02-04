@@ -15,10 +15,12 @@ namespace Axis.Ion.Types
 
         public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
 
-        internal IonString(string? value, params IIonType.Annotation[] annotations)
+        public IonString(string? value, params IIonType.Annotation[] annotations)
         {
             Value = value;
-            _annotations = annotations.Validate();
+            _annotations = annotations
+                .Validate()
+                .ToArray();
         }
 
         #region IIonType

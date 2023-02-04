@@ -16,21 +16,28 @@ namespace Axis.Ion.Types
 
         public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
 
-        internal IonFloat(double? value, params IIonType.Annotation[] annotations)
+        public IonFloat(double? value, params IIonType.Annotation[] annotations)
         {
             Value = value;
-            _annotations = annotations.Validate();
+            _annotations = annotations
+                .Validate()
+                .ToArray();
         }
 
         #region IIonType
 
         public bool IsNull => Value == null;
 
-        public bool ValueEquals(IIonValueType<double?> other) => Value == other?.Value == true;
+        public bool ValueEquals(IIonValueType<double?> other) => Value.NullOrEquals(other.Value);
 
-        public string ToIonText() => Value != null 
-            ? new DecomposedDecimal(Value.Value).ToScientificNotation()
-            : "null.float";
+        public string ToIonText() => Value switch
+        {
+            null => "null.float",
+            double.NaN => "nan",
+            double.PositiveInfinity => "+inf",
+            double.NegativeInfinity => "-inf",
+            _ => Value.Value.ToExponentNotation()
+        };
 
         #endregion
 

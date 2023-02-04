@@ -1,4 +1,4 @@
-﻿using Axis.Ion.IO;
+﻿using Axis.Ion.IO.Text;
 using Axis.Pulsar.Grammar;
 using Axis.Pulsar.Grammar.CST;
 using Axis.Pulsar.Grammar.Exceptions;
@@ -15,8 +15,8 @@ namespace Axis.Ion.Tests.IO
         {
             try
             {
-                using var ionXbnfStream = typeof(IonIO).Assembly
-                    .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+                using var ionXbnfStream = typeof(TextSerializer).Assembly
+                    .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
                 var importer = new Importer();
                 var ionGrammar = importer
@@ -35,8 +35,8 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestAnnotation()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -58,8 +58,8 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestNull()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -81,8 +81,8 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestBool()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -125,8 +125,8 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestInt()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -162,8 +162,8 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestFloat()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -209,8 +209,8 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestDecimal()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -270,8 +270,8 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestTimestamp()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -351,8 +351,8 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestString()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -409,8 +409,8 @@ multiline stuff
         [TestMethod]
         public void TestSymbol()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -446,8 +446,8 @@ multiline stuff
         [TestMethod]
         public void TestBlob()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -473,8 +473,8 @@ multiline stuff
         [TestMethod]
         public void TestClob()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -500,8 +500,8 @@ multiline stuff
         [TestMethod]
         public void TestList()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -537,8 +537,8 @@ multiline stuff
         [TestMethod]
         public void TestStruct()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -573,8 +573,8 @@ multiline stuff
         [TestMethod]
         public void TestSexp()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -598,8 +598,8 @@ multiline stuff
         [TestMethod]
         public void TestBlockComments()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -617,8 +617,8 @@ multiline stuff
         [TestMethod]
         public void TestLineComments()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);
@@ -636,8 +636,8 @@ multiline stuff
         [TestMethod]
         public void TestBlockSpace()
         {
-            using var ionXbnfStream = typeof(IonIO).Assembly
-                .GetManifestResourceStream($"{typeof(IonIO).Namespace}.IonGrammar.xbnf");
+            using var ionXbnfStream = typeof(TextSerializer).Assembly
+                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
 
             var ionGrammar = new Importer()
                 .ImportGrammar(ionXbnfStream);

@@ -27,8 +27,7 @@ namespace Axis.Ion.Types
 
         public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
 
-
-        internal IonStruct(Initializer? initializer)
+        public IonStruct(Initializer? initializer)
         {
             _annotations = initializer?.Annotations.ToArray();
             _properties = initializer != null
@@ -36,9 +35,11 @@ namespace Axis.Ion.Types
                 : null;
         }
 
-        internal IonStruct(params IIonType.Annotation[] annotations)
+        public IonStruct(params IIonType.Annotation[] annotations)
         {
-            _annotations = annotations?.ToArray();
+            _annotations = annotations
+                .Validate()
+                .ToArray();
             _properties = null;
         }
 
@@ -120,7 +121,7 @@ namespace Axis.Ion.Types
         /// </summary>
         public readonly struct Property
         {
-            private readonly IIonSymbol? _propertyName;
+            private readonly string? _propertyName;
 
             /// <summary>
             /// The property's name. Note that this can either be a proper string, or similar to <see cref="IIonSymbol.Identifier"/>
@@ -135,23 +136,9 @@ namespace Axis.Ion.Types
             internal Property(string name, IIonType value)
             {
                 Value = value ?? throw new ArgumentNullException(nameof(value));
-                _propertyName = IIonSymbol
-                    .Of(name)
-                    .ThrowIf(
-                        s => s is IIonSymbol.Operator,
-                        new ArgumentException($"Invalid property name: {name}"));
-            }
-
-            internal Property(IIonSymbol.Identifier name, IIonType value)
-            {
-                _propertyName = name.ThrowIfDefault(new ArgumentException(nameof(name)));
-                Value = value ?? throw new ArgumentNullException(nameof(value));
-            }
-
-            internal Property(IIonSymbol.QuotedSymbol name, IIonType value)
-            {
-                _propertyName = name.ThrowIfDefault(new ArgumentException(nameof(name)));
-                Value = value ?? throw new ArgumentNullException(nameof(value));
+                _propertyName = !IIonTextSymbol.TryParse(name, out var symbol)
+                    ? throw new ArgumentException($"Invalid property name: {name}")
+                    : symbol?.ToIonText();
             }
 
             public override int GetHashCode() => HashCode.Combine(_propertyName, Value);

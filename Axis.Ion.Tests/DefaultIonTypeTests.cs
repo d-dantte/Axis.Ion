@@ -15,37 +15,32 @@ namespace Axis.Ion.Tests
             Enum.GetValues<IonTypes>().ForAll(type =>
             {
                 // creation test
-                var stypes = type == IonTypes.Symbol ? SymbolTypes : new[] { (Type)null };
+                var annotations = CreateAnnotations(3);
+                var value = CreateValue(type, annotations);
+                var ion = CreateWithConstructor(type, value, annotations);
+                TestCreation(type, ion);
 
-                foreach (var stype in stypes)
-                {
-                    var annotations = CreateAnnotations(3);
-                    var value = CreateValue(type, stype, annotations);
-                    var ion = CreateWithConstructor(type, value, stype, annotations);
-                    TestCreation(type, ion);
+                // default test
+                if (type != IonTypes.Null)
+                    TestDefault(type, ion, false);
+                TestAnnotatedDefault(type, annotations);
 
-                    // default test
-                    if(type != IonTypes.Null)
-                        TestDefault(type, ion, false);
-                    TestAnnotatedDefault(type, stype, annotations);
+                // annotation test
+                TestAnnotations(ion, annotations);
 
-                    // annotation test
-                    TestAnnotations(ion, annotations);
+                // value test
+                TestValue(ion, value);
 
-                    // value test
-                    TestValue(ion, value);
+                // string test
+                //TestIonTextAndToString(ion);
 
-                    // string test
-                    //TestIonTextAndToString(ion);
+                // equality test
+                var ion2 = CreateWithConstructor(type, value, annotations);
+                TestEquality(ion, ion2);
 
-                    // equality test
-                    var ion2 = CreateWithConstructor(type, value, stype, annotations);
-                    TestEquality(ion, ion2);
-
-                    // test implicit
-                    if (type != IonTypes.Null)
-                        TestImplicitOperator(type, value, stype);
-                }
+                // test implicit
+                if (type != IonTypes.Null)
+                    TestImplicitOperator(type, value);
             });
         }
 
@@ -70,17 +65,16 @@ namespace Axis.Ion.Tests
 
         private void TestDefault(IonTypes type, IIonType value, bool isDefault = true)
         {
-            var symbolType = type == IonTypes.Symbol ? SecureRandom.NextValue(SymbolTypes) : null;
-            var @default = CreateDefault(type, symbolType);
+            var @default = CreateDefault(type);
             if (isDefault)
                 Assert.AreEqual(value, @default);
 
             else Assert.AreNotEqual(value, @default);
         }
 
-        private void TestAnnotatedDefault(IonTypes type, Type? symbolType, IIonType.Annotation[] annotations)
+        private void TestAnnotatedDefault(IonTypes type, IIonType.Annotation[] annotations)
         {
-            var @default = CreateDefault(type, symbolType, annotations);
+            var @default = CreateDefault(type, annotations);
             Assert.IsTrue(annotations.SequenceEqual(@default.Annotations));
         }
 
@@ -115,16 +109,16 @@ namespace Axis.Ion.Tests
                     Assert.AreEqual(value, @string.Value);
                     break;
 
-                case IIonSymbol symbol:
-                    if (ionValue is IIonSymbol.Identifier id)
-                        Assert.AreEqual(value, id.Symbol);
+                case IonQuotedSymbol symbol:
+                    Assert.AreEqual(value, symbol.Value);
+                    break;
 
-                    if (ionValue is IIonSymbol.QuotedSymbol q)
-                        Assert.AreEqual(value, q.Symbol);
+                case IonIdentifier identifier:
+                    Assert.AreEqual(value, identifier.Value);
+                    break;
 
-                    if (ionValue is IIonSymbol.Operator o)
-                        Assert.AreEqual(value, o.Symbol);
-
+                case IonOperator @operator:
+                    Assert.AreEqual(value, @operator.Value);
                     break;
 
                 case IonBlob blob:
@@ -178,15 +172,11 @@ namespace Axis.Ion.Tests
                 IonInt i => i.Value?.ToString() ?? "null.int",
                 IonFloat i => i.Value?.ToString() ?? "null.float",
                 IonDecimal i => i.Value?.ToString() ?? "null.decimal",
-                IonTimestamp i => i.Value?.ToString(IonTimestamp._Format) ?? "null.timestamp",
+                IonTimestamp i => i.Value?.ToString(IonTimestamp.Format) ?? "null.timestamp",
                 IonString i => i.Value ?? "null.string",
-                IIonSymbol => value switch
-                {
-                    IIonSymbol.QuotedSymbol i => i.Symbol?.WrapIn("'"),
-                    IIonSymbol.Identifier i => i.Symbol,
-                    IIonSymbol.Operator i => i.Symbol == null? "": i.Symbol.Select(s => (char)s).ApplyTo(Extensions.AsString),
-                    _ => throw new InvalidOperationException($"Invalid symbol type: {value?.GetType()}")
-                } ?? "null.symbol",
+                IonQuotedSymbol i => i.Value?.WrapIn("'") ?? "null.symbol",
+                IonIdentifier i => i.Value ?? "null.symbol",
+                IonOperator i => i.Value?.Select(s => (char)s).ApplyTo(Extensions.AsString) ?? "null.symbol",
                 IonBlob i => i.Value?.ApplyTo(Convert.ToBase64String).WrapIn("{{ ", " }}") ?? "null.blob",
                 IonClob i => i.Value?.ApplyTo(Encoding.ASCII.GetString) ?? "null.clob",
                 IonStruct i => i.Value?.Select(p => p.ToString()).JoinUsing(", ").WrapIn("{", "}") ?? "null.struct",
@@ -213,7 +203,7 @@ namespace Axis.Ion.Tests
             Assert.AreEqual(first, second);
         }
 
-        private void TestImplicitOperator(IonTypes expectedType, object? value, Type? symbolType = null)
+        private void TestImplicitOperator(IonTypes expectedType, object? value)
         {
             if (value is null)
                 throw new ArgumentNullException(nameof(value));
@@ -251,22 +241,19 @@ namespace Axis.Ion.Tests
                     ion = @is;
                     break;
 
-                case IonTypes.Symbol:
-                    if (typeof(IIonSymbol.Operator).Equals(symbolType))
-                    {
-                        IIonSymbol.Operator o = (IIonSymbol.Operators[])value;
-                        ion = o;
-                    }
-                    else if(typeof(IIonSymbol.QuotedSymbol).Equals(symbolType))
-                    {
-                        IIonSymbol.QuotedSymbol q = (string)value;
-                        ion = q;
-                    }
-                    else
-                    {
-                        IIonSymbol.Identifier i = (string)value;
-                        ion = i;
-                    }
+                case IonTypes.OperatorSymbol:
+                    IonOperator op = (Operators[])value;
+                    ion = op;
+                    break;
+
+                case IonTypes.IdentifierSymbol:
+                    IonIdentifier identifier = (string)value;
+                    ion = identifier;
+                    break;
+
+                case IonTypes.QuotedSymbol:
+                    IonQuotedSymbol qsymbol = (string)value;
+                    ion = qsymbol;
                     break;
 
                 case IonTypes.Blob:
@@ -295,7 +282,7 @@ namespace Axis.Ion.Tests
                     break;
 
                 case IonTypes.Null:
-                    ion = IIonType.OfNull();
+                    ion = new IonNull();
                     break;
 
                 default:
@@ -307,7 +294,7 @@ namespace Axis.Ion.Tests
         #endregion
 
         #region creators
-        private IIonType CreateWithConstructor(IonTypes type, object? value, Type? symbolType, params IIonType.Annotation[] annotations)
+        private IIonType CreateWithConstructor(IonTypes type, object? value, params IIonType.Annotation[] annotations)
         {
             return type switch
             {
@@ -318,12 +305,9 @@ namespace Axis.Ion.Tests
                 IonTypes.Decimal => new IonDecimal(value as decimal?, annotations),
                 IonTypes.Timestamp => new IonTimestamp(value as DateTimeOffset?, annotations),
                 IonTypes.String => new IonString(value as string, annotations),
-                IonTypes.Symbol =>
-                    typeof(IIonSymbol.Operator).Equals(symbolType) ? new IIonSymbol.Operator((IIonSymbol.Operators[])value, annotations) :
-                    typeof(IIonSymbol.QuotedSymbol).Equals(symbolType) ? new IIonSymbol.QuotedSymbol(value as string, annotations) :
-                    typeof(IIonSymbol.Identifier).Equals(symbolType) ? new IIonSymbol.Identifier(value as string, annotations) :
-                    throw new FormatException($"Invalid symbol format: {value}"),
-
+                IonTypes.OperatorSymbol => new IonOperator((Operators[]?)value, annotations),
+                IonTypes.QuotedSymbol => new IonQuotedSymbol(value as string, annotations),
+                IonTypes.IdentifierSymbol => new IonIdentifier(value as string, annotations),
                 IonTypes.Blob => new IonBlob(value as byte[], annotations),
                 IonTypes.Clob => new IonClob(value as byte[], annotations),
                 IonTypes.Struct => new IonStruct(value as IonStruct.Initializer),
@@ -334,34 +318,7 @@ namespace Axis.Ion.Tests
             };
         }
 
-        private IIonType CreateWithOf(IonTypes type, object value, params IIonType.Annotation[] annotations)
-        {
-            return type switch
-            {
-                IonTypes.Null => IIonType.OfNull(annotations),
-                IonTypes.Bool => IIonType.Of(value as bool?, annotations),
-                IonTypes.Int => IIonType.Of(value as BigInteger?, annotations),
-                IonTypes.Float => IIonType.Of(value as double?, annotations),
-                IonTypes.Decimal => IIonType.Of(value as decimal?, annotations),
-                IonTypes.Timestamp => IIonType.Of(value as DateTimeOffset?, annotations),
-                IonTypes.String => IIonType.OfString(value as string, annotations),
-                IonTypes.Symbol =>
-                    value is null ? new IIonSymbol.Identifier(null, annotations) :
-                    value is IIonSymbol.Operators[] ops ? new IIonSymbol.Operator(ops, annotations) :
-                    value.As<string>().Trim().StartsWith('\'') ? new IIonSymbol.QuotedSymbol(value as string, annotations) :
-                    new IIonSymbol.Identifier(value as string, annotations),
-
-                IonTypes.Blob => IIonType.OfBlob(value as byte[], annotations),
-                IonTypes.Clob => IIonType.OfClob(value as byte[], annotations),
-                IonTypes.Struct => IIonType.Of(value as IonStruct.Initializer),
-                IonTypes.List => IIonType.Of(value as IonList.Initializer),
-                IonTypes.Sexp => IIonType.Of(value as IonSexp.Initializer),
-
-                _ => throw new ArgumentException("Invalid value")
-            };
-        }
-
-        private IIonType CreateDefault(IonTypes type, Type? symbolType, params IIonType.Annotation[] annotations)
+        private IIonType CreateDefault(IonTypes type, params IIonType.Annotation[] annotations)
         {
             return type switch
             {
@@ -393,14 +350,17 @@ namespace Axis.Ion.Tests
                     ? default(IonString)
                     : new IonString(null, annotations),
 
-                IonTypes.Symbol =>
-                    annotations == null && typeof(IIonSymbol.QuotedSymbol).Equals(symbolType) ? default(IIonSymbol.Operator) :
-                    annotations != null && typeof(IIonSymbol.QuotedSymbol).Equals(symbolType) ? new IIonSymbol.QuotedSymbol(null, annotations) :
-                    annotations == null && typeof(IIonSymbol.Identifier).Equals(symbolType) ? default(IIonSymbol.Identifier) :
-                    annotations != null && typeof(IIonSymbol.Identifier).Equals(symbolType) ? new IIonSymbol.Identifier(null, annotations) :
-                    annotations == null && typeof(IIonSymbol.Operator).Equals(symbolType) ? default(IIonSymbol.Operator) :
-                    annotations != null && typeof(IIonSymbol.Operator).Equals(symbolType) ? new IIonSymbol.Operator(null, annotations) :
-                    throw new InvalidOperationException("invalid symbol creation parameters"),
+                IonTypes.OperatorSymbol => annotations is null
+                    ? default(IonOperator)
+                    : new IonOperator(null, annotations),
+
+                IonTypes.IdentifierSymbol => annotations is null
+                    ? default(IonIdentifier)
+                    : new IonIdentifier(null, annotations),
+
+                IonTypes.QuotedSymbol => annotations is null
+                    ? default(IonQuotedSymbol)
+                    : new IonQuotedSymbol(null, annotations),
 
                 IonTypes.Blob => annotations is null
                     ? default(IonBlob)
@@ -438,7 +398,7 @@ namespace Axis.Ion.Tests
             return list.ToArray();
         }
 
-        private object? CreateValue(IonTypes type, Type? symbolType = null, params IIonType.Annotation[] annotations)
+        private object? CreateValue(IonTypes type, params IIonType.Annotation[] annotations)
         {
             var sampleTypes = new[] { IonTypes.Int, IonTypes.Float, IonTypes.Bool, IonTypes.Decimal, IonTypes.Timestamp, IonTypes.String };
             return type switch
@@ -450,11 +410,9 @@ namespace Axis.Ion.Tests
                 IonTypes.Decimal => Convert.ToDecimal(SecureRandom.NextSignedLong()/2D),
                 IonTypes.Timestamp => DateTimeOffset.Now + TimeSpan.FromMilliseconds(SecureRandom.NextSignedInt()),
                 IonTypes.String => SecureRandom.NextValue(Words),
-                IonTypes.Symbol =>
-                    typeof(IIonSymbol.Operator).Equals(symbolType) ? RandomOperatorSymbols() :
-                    typeof(IIonSymbol.QuotedSymbol).Equals(symbolType) ? SecureRandom.NextValue(Words).WrapIn("'") :
-                    typeof(IIonSymbol.Identifier).Equals(symbolType) ? SecureRandom.NextValue(Words) :
-                    throw new InvalidOperationException("Invaid symbol type: null"),
+                IonTypes.OperatorSymbol => RandomOperatorSymbols(),
+                IonTypes.QuotedSymbol => SecureRandom.NextValue(Words).WrapIn("'"),
+                IonTypes.IdentifierSymbol => SecureRandom.NextValue(Words),
                 IonTypes.Blob => SecureRandom.NextBytes(SecureRandom.NextInt(1000)),
                 IonTypes.Clob => SecureRandom.NextValue(Words).ApplyTo(Encoding.ASCII.GetBytes),
                 IonTypes.Struct => new IonStruct.Initializer(
@@ -501,39 +459,13 @@ namespace Axis.Ion.Tests
             for (int cnt = 0; cnt < count; cnt++)
             {
                 var type = SecureRandom.NextValue(types);
-                var stype = type == IonTypes.Symbol
-                    ? SecureRandom.NextValue(SymbolTypes)
-                    : null;
-                var value = CreateValue(type, stype);
-                values.Add(CreateWithConstructor(type, value, stype));
+                var value = CreateValue(type);
+                values.Add(CreateWithConstructor(type, value));
             }
             return values.ToArray();
         }
 
-        private IIonSymbol[] CreateRandomSymbols(int count)
-        {
-            count = Math.Abs(count);
-            var symbols = new List<IIonSymbol>();
-            for(int cnt = 0; cnt < count; cnt++)
-            {
-                var stype = SecureRandom.NextValue(SymbolTypes);
-                object value =
-                    stype.Equals(typeof(IIonSymbol.Operator)) ? SecureRandom.NextValue(Enum.GetValues<IIonSymbol.Operators>()) :
-                    stype.Equals(typeof(IIonSymbol.QuotedSymbol)) ? SecureRandom.NextValue(Words).WrapIn("'") :
-                    SecureRandom.NextValue(Words);
-                symbols.Add(CreateWithConstructor(IonTypes.Symbol, value, stype) as IIonSymbol);
-            }
-
-            return symbols.ToArray();
-        }
         #endregion
-
-        private static readonly Type[] SymbolTypes = new[]
-        {
-            typeof(IIonSymbol.Operator),
-            typeof(IIonSymbol.Identifier),
-            typeof(IIonSymbol.QuotedSymbol)
-        };
         private static readonly string[] Words = new[]
         {
             "aback", "abaft", "abandoned", "abashed", "aberrant", "abhorrent", "abiding", "abject", "ablaze", "able", "abnormal", "aboard", "aboriginal", "abortive", "abounding", "abrasive", "abrupt",
@@ -669,10 +601,10 @@ namespace Axis.Ion.Tests
                 .WrapIn("[", "]");
         }
 
-        private static IIonSymbol.Operators[] RandomOperatorSymbols()
+        private static Operators[] RandomOperatorSymbols()
         {
             var length = SecureRandom.NextInt(5) + 1;
-            var enums = Enum.GetValues<IIonSymbol.Operators>();
+            var enums = Enum.GetValues<Operators>();
             return SecureRandom
                 .NextSequence(length, enums.Length)
                 .Select(index => enums[index])

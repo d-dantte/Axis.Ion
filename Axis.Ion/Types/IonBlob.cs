@@ -20,10 +20,12 @@ namespace Axis.Ion.Types
 
         public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
 
-        internal IonBlob(byte[]? value, params IIonType.Annotation[] annotations)
+        public IonBlob(byte[]? value, params IIonType.Annotation[] annotations)
         {
             _blob = value;
-            _annotations = annotations.Validate();
+            _annotations = annotations
+                .Validate()
+                .ToArray();
         }
 
         #region IIonType

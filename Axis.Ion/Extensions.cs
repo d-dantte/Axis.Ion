@@ -1,7 +1,10 @@
-﻿using Axis.Ion.Types;
+﻿using Axis.Ion.IO.Binary;
+using Axis.Ion.Types;
 using Axis.Ion.Utils;
+using Axis.Luna.Extensions;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -14,31 +17,18 @@ namespace Axis.Ion
     /// </summary>
     internal static class Extensions
     {
-        #region remove these
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe int ToInt32Bits(this float value)
+        internal static string Reverse(this string value)
         {
-            return *((int*)&value);
-        }
+            if (string.IsNullOrWhiteSpace(value)
+                || value.Length == 1)
+                return value;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe float ToSingle(this int value)
-        {
-            return *((float*)&value);
+            else
+                return value
+                    .ToCharArray()
+                    .With(Array.Reverse)
+                    .ApplyTo(array => new string(array));
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe long ToInt64Bits(this double value)
-        {
-            return *((long*)&value);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe double ToDouble(this long value)
-        {
-            return *((double*)&value);
-        }
-        #endregion
 
         public static Annotation[] Validate(this Annotation[] annotations)
         {
@@ -53,7 +43,7 @@ namespace Axis.Ion
 
         public static string ValidatePropertyName(this string propertyName)
         {
-            if (IIonSymbol.Identifier.TryParse(propertyName, out _))
+            if (IonIdentifier.TryParse(propertyName, out _))
                 return propertyName;
 
             else throw new FormatException($"Invlid property name: {propertyName}");
@@ -133,6 +123,113 @@ namespace Axis.Ion
 
             for (int cnt = 0; cnt < repetitions; cnt++)
                 yield return map.Invoke(cnt);
+        }
+
+        public static byte[] GetBytes(this decimal @decimal)
+        {
+            return @decimal
+                .ApplyTo(decimal.GetBits)
+                .SelectMany(BitConverter.GetBytes)
+                .ToArray();
+        }
+
+        public static decimal ToDecimal(this byte[] bytes)
+        {
+            if (bytes == null)
+                throw new ArgumentNullException(nameof(bytes));
+
+            if (bytes.Length != 16)
+                throw new ArgumentException("byte array length must be 16");
+
+            return bytes
+                .Batch(4)
+                .Select(batch => batch.Batch.ToArray())
+                .Select(intArray => BitConverter.ToInt32(intArray))
+                .ToArray()
+                .ApplyTo(intArray => new decimal(intArray));
+        }
+
+        public static IEnumerable<(long Index, IEnumerable<T> Batch)> Batch<T>(this
+            IEnumerable<T> values,
+            int batchCount,
+            bool returnIncompleteTail = true)
+        {
+            long count = 0;
+            long index = 0;
+            var batch = new List<T>();
+
+            foreach(var value in values)
+            {
+                batch.Add(value);
+
+                if(++count % batchCount == 0)
+                {
+                    yield return (index++, batch);
+
+                    batch = new List<T>();
+                }
+            }
+
+            if (batch.Count > 0 && returnIncompleteTail)
+                yield return (index++, batch);
+        }
+
+        public static int CastToInt(this BigInteger bigInteger) => (int)bigInteger;
+
+        public static long CastToLong(this BigInteger bigInteger) => (long)bigInteger;
+
+        public static int HMS(this DateTimeOffset timestamp)
+        {
+            return (timestamp.Hour * 3600)
+                +  (timestamp.Minute * 60)
+                +  timestamp.Second;
+        }
+
+        public static long TickSeconds(this DateTimeOffset timestamp) => timestamp.TimeOfDay.Ticks % 10_000_000L;
+
+        public static string ToExponentNotation(this
+            decimal value,
+            string exponentDelimiter = "E",
+            ushort maxSignificantDigits = 17)
+        {
+            var zeros = value.ToString().ExtractFormatZeros(maxSignificantDigits);
+            return value
+                .ToString($"0.{zeros}E0")
+                .Replace("E", exponentDelimiter);
+        }
+
+        public static string ToExponentNotation(this
+            double value,
+            ushort maxSignificantDigits = 17)
+            => new DecomposedDecimal(value).ToScientificNotation(maxSignificantDigits);
+
+        private static string ExtractFormatZeros(this string value, ushort maxSignificantDigits)
+        {
+            return value
+                .ExtractSignificantDigits(maxSignificantDigits)
+                .ApplyTo(digits => Zeros(digits.Length - 1));
+        }
+
+        private static string ExtractSignificantDigits(this
+            string value,
+            ushort maxSignificantDigits = 17)
+        {
+            var digits = value
+                .Replace("-", "")
+                .Replace(".", "")
+                .TrimStart('0')
+                .TrimEnd('0');
+
+            return digits.Length >= maxSignificantDigits
+                ? digits[..maxSignificantDigits]
+                : digits;
+        }
+
+        private static string Zeros(int count)
+        {
+            return count
+                .RepeatApply(index => '0')
+                .ApplyTo(chars => new string(chars.ToArray()));
         }
     }
 }

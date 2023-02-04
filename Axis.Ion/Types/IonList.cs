@@ -26,13 +26,15 @@ namespace Axis.Ion.Types
             get => _elements?[key] ?? throw new InvalidOperationException($"Cannot read from the default {nameof(IonList)}");
         }
 
-        internal IonList(Initializer? initializer)
+        public IonList(Initializer? initializer)
         {
-            _annotations = initializer?.Annotations.Validate();
+            _annotations = initializer?.Annotations
+                .Validate()
+                .ToArray();
             _elements = initializer?.Elements.ToArray();
         }
 
-        internal IonList(params IIonType.Annotation[] annotations)
+        public IonList(params IIonType.Annotation[] annotations)
         {
             _annotations = annotations?.ToArray();
             _elements = null;

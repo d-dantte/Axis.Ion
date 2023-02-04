@@ -1,39 +1,13 @@
 ﻿using Axis.Ion.IO.Binary;
-using System;
+using Axis.Luna.Extensions;
 using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Axis.Ion.Tests.IO.Binary
 {
     [TestClass]
     public class VarByteTests
     {
-        [TestMethod]
-        public void AppendWithOverflow_WithValidInput_AddsCorrectValues()
-        {
-            var bits = new List<bool>();
-            var bitCount = 0;
-
-            for (int cnt = 0; cnt < 20; cnt++)
-            {
-                _ = bits.AppendWithOverflow(false, ref bitCount);
-            }
-
-            Assert.AreEqual(22, bits.Count);
-            Assert.AreEqual(20, bitCount);
-
-            var expected = new[] 
-            {
-                false, false, false, false, false, false, false, true, false, false, false, false,
-                false, false, false, true, false, false, false, false, false, false
-            };
-            Assert.IsTrue(expected.SequenceEqual(bits));
-        }
-
         [TestMethod]
         public void ToByte_WithValidInput_ShouldConvertToByte()
         {
@@ -92,16 +66,6 @@ namespace Axis.Ion.Tests.IO.Binary
         }
 
         [TestMethod]
-        public void ToVarBytes()
-        {
-            var count = 10;
-            var bytes = count.ToVarBytes();
-
-            Assert.AreEqual(2, bytes.Length);
-            Assert.AreEqual(138, bytes[0]); //0b_1000_1010
-        }
-
-        [TestMethod]
         public void ToBigInt()
         {
             var count = 10;
@@ -132,6 +96,82 @@ namespace Axis.Ion.Tests.IO.Binary
             varbyteInt = memory.ReadVarByteInteger();
 
             Assert.AreEqual(@int, (int)varbyteInt);
+        }
+
+        [TestMethod]
+        public void GetBitsTest()
+        {
+            for (int cnt = 0; cnt < short.MaxValue; cnt++)
+            {
+                var bar = new BigInteger(cnt).GetBits();
+
+                var expected = Convert.ToString(cnt, 2);
+                var value = bar.ToBinaryString();
+
+                if (!expected.Equals(value))
+                    Console.WriteLine(value);
+
+                Assert.AreEqual(expected, value);
+            }
+        }
+
+        [TestMethod]
+        public void ToVarBytes()
+        {
+            var value = new BigInteger(10);
+            var bytes = value.ToVarBytes();
+
+            Assert.AreEqual(1, bytes.Length);
+            Assert.AreEqual(10, bytes[0]); //0b_1000_1010
+
+
+            value = new BigInteger(127);
+            bytes = value.ToVarBytes();
+
+            Assert.AreEqual(1, bytes.Length);
+            Assert.AreEqual(127, bytes[0]);
+
+            value = new BigInteger(128);
+            bytes = value.ToVarBytes();
+
+            Assert.AreEqual(2, bytes.Length);
+            Assert.AreEqual(128, bytes[0]);
+            Assert.AreEqual(1, bytes[1]);
+
+            value = new BigInteger(16376);
+            bytes = value.ToVarBytes();
+
+            Assert.AreEqual(2, bytes.Length);
+            Assert.AreEqual(248, bytes[0]);
+            Assert.AreEqual(127, bytes[1]);
+        }
+
+        [TestMethod]
+        public void IsEquivalentTo()
+        {
+            var bitArray = new BitArray(new byte[] { 65 });
+            var bitArray2 = new BitArray(new byte[] { 65 });
+            var bitArray3 = new BitArray(new byte[] { 64 });
+            BitArray? null1 = null;
+            BitArray? null2 = null;
+
+            Assert.IsTrue(bitArray.IsEquivalentTo(bitArray2));
+            Assert.IsFalse(bitArray.IsEquivalentTo(bitArray3));
+            Assert.IsTrue(null1.IsEquivalentTo(null2));
+            Assert.IsFalse(bitArray.IsEquivalentTo(null1));
+            Assert.IsFalse(null2.IsEquivalentTo(bitArray3));
+        }
+
+        [TestMethod]
+        public void ToBitArray()
+        {
+            var bitArray = new BitArray(new byte[] { 76 });
+            var binaryString = bitArray.ToBinaryString();
+            var bitArray2 = binaryString.ToBitArray();
+
+            Assert.IsTrue(bitArray.IsEquivalentTo(bitArray2));
+            var exception = Assert.ThrowsException<FormatException>(() => "454fr".ToBitArray());
+            Console.WriteLine(exception.Message);
         }
     }
 }

@@ -16,10 +16,12 @@ namespace Axis.Ion.Types
 
         public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
 
-        internal IonDecimal(decimal? value, params IIonType.Annotation[] annotations)
+        public IonDecimal(decimal? value, params IIonType.Annotation[] annotations)
         {
             Value = value;
-            _annotations = annotations.Validate();
+            _annotations = annotations
+                .Validate()
+                .ToArray();
         }
 
 
@@ -30,7 +32,7 @@ namespace Axis.Ion.Types
         public bool ValueEquals(IIonValueType<decimal?> other) => Value == other?.Value == true;
 
         public string ToIonText() => Value != null
-            ? new DecomposedDecimal(Value.Value).ToScientificNotation().Replace("E", "D")
+            ? Value.Value.ToExponentNotation("D")
             : "null.decimal";
 
         #endregion

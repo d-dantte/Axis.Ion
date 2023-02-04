@@ -7,7 +7,8 @@ using static Axis.Luna.Extensions.Common;
 namespace Axis.Ion.Types
 {
     /// <summary>
-    /// TODO: replace long? with BigInteger?
+    /// Ion Int.
+    /// Note that all encapsulated values are assumed to be signed - including single byte values.
     /// </summary>
     public readonly struct IonInt : IIonValueType<BigInteger?>
     {
@@ -19,17 +20,12 @@ namespace Axis.Ion.Types
 
         public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
 
-        internal IonInt(
-            long? value,
-            params IIonType.Annotation[] annotations)
-            : this((BigInteger?)value, annotations)
-        {
-        }
-
-        internal IonInt(BigInteger? value, params IIonType.Annotation[] annotations)
+        public IonInt(BigInteger? value, params IIonType.Annotation[] annotations)
         {
             Value = value;
-            _annotations = annotations.Validate();
+            _annotations = annotations
+                .Validate()
+                .ToArray();
         }
 
         #region IIonType

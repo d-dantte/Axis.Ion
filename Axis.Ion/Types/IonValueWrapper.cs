@@ -1,5 +1,6 @@
 ﻿using Axis.Luna.Extensions;
 using System;
+using System.Numerics;
 
 namespace Axis.Ion.Types
 {
@@ -37,6 +38,9 @@ namespace Axis.Ion.Types
         public static implicit operator IonValueWrapper(long? value)
             => new IonValueWrapper(new IonInt(value));
 
+        public static implicit operator IonValueWrapper(BigInteger? value)
+            => new IonValueWrapper(new IonInt(value));
+
         public static implicit operator IonValueWrapper(double? value)
             => new IonValueWrapper(new IonFloat(value));
 
@@ -60,6 +64,49 @@ namespace Axis.Ion.Types
 
         public static implicit operator IonValueWrapper(IonSexp.Initializer value)
             => new IonValueWrapper(new IonSexp(value));
+
+
+        public static implicit operator IonValueWrapper(IonBool value)
+            => new IonValueWrapper(value);
+
+        public static implicit operator IonValueWrapper(IonInt value)
+            => new IonValueWrapper(value);
+
+        public static implicit operator IonValueWrapper(IonFloat value)
+            => new IonValueWrapper(value);
+
+        public static implicit operator IonValueWrapper(IonDecimal value)
+            => new IonValueWrapper(value);
+
+        public static implicit operator IonValueWrapper(IonTimestamp value)
+            => new IonValueWrapper(value);
+
+        public static implicit operator IonValueWrapper(IonString value)
+            => new IonValueWrapper(value);
+
+        public static implicit operator IonValueWrapper(IonQuotedSymbol value)
+            => new IonValueWrapper(value);
+
+        public static implicit operator IonValueWrapper(IonIdentifier value)
+            => new IonValueWrapper(value);
+
+        public static implicit operator IonValueWrapper(IonOperator value)
+            => new IonValueWrapper(value);
+
+        public static implicit operator IonValueWrapper(IonClob value)
+            => new IonValueWrapper(value);
+
+        public static implicit operator IonValueWrapper(IonBlob value)
+            => new IonValueWrapper(value);
+
+        public static implicit operator IonValueWrapper(IonSexp value)
+            => new IonValueWrapper(value);
+
+        public static implicit operator IonValueWrapper(IonList value)
+            => new IonValueWrapper(value);
+
+        public static implicit operator IonValueWrapper(IonStruct value)
+            => new IonValueWrapper(value);
         #endregion
     }
 }

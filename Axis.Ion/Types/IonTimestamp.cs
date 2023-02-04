@@ -7,7 +7,7 @@ namespace Axis.Ion.Types
 {
     public readonly struct IonTimestamp : IIonValueType<DateTimeOffset?>
     {
-        internal static readonly string _Format = "yyyy-MM-ddTHH:mm:ss.ffffffzzz";
+        internal static readonly string Format = "yyyy-MM-ddTHH:mm:ss.ffffffzzz";
 
         private readonly IIonType.Annotation[] _annotations;
 
@@ -17,10 +17,12 @@ namespace Axis.Ion.Types
 
         public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
 
-        internal IonTimestamp(DateTimeOffset? value, params IIonType.Annotation[] annotations)
+        public IonTimestamp(DateTimeOffset? value, params IIonType.Annotation[] annotations)
         {
             Value = value;
-            _annotations = annotations.Validate();
+            _annotations = annotations
+                .Validate()
+                .ToArray();
         }
 
         #region IIonType
@@ -29,7 +31,7 @@ namespace Axis.Ion.Types
 
         public bool ValueEquals(IIonValueType<DateTimeOffset?> other) => Value == other?.Value == true;
 
-        public string ToIonText() => Value?.ToString(_Format) ?? "null.timestamp";
+        public string ToIonText() => Value?.ToString(Format) ?? "null.timestamp";
 
         #endregion
 
@@ -56,6 +58,49 @@ namespace Axis.Ion.Types
 
         #endregion
 
+        public IonTimestamp Copy(Precision precision = Precision.Millisecond)
+        {
+            if (Value is null)
+                return new IonTimestamp(null, _annotations);
+
+            var ts = Value.Value;
+            var milliseconds = int.Parse(ts.ToString("ffffff")) / 1000d;
+            var dateTime = precision switch
+            {
+                Precision.Year => new DateTimeOffset(ts.Year, 1, 1, 0, 0, 0, Value.Value.Offset),
+                Precision.Month => new DateTimeOffset(ts.Year, ts.Month, 1, 0, 0, 0, Value.Value.Offset),
+                Precision.Day => new DateTimeOffset(ts.Year, ts.Month, ts.Day, 0, 0, 0, Value.Value.Offset),
+                Precision.Minute => new DateTimeOffset(ts.Year, ts.Month, ts.Day, ts.Hour, ts.Minute, 0, Value.Value.Offset),
+                Precision.Second => new DateTimeOffset(ts.Year, ts.Month, ts.Day, ts.Hour, ts.Minute, ts.Second, Value.Value.Offset),
+                Precision.Millisecond => new DateTimeOffset(ts.Year, ts.Month, ts.Day, ts.Hour, ts.Minute, ts.Second, Value.Value.Offset) + TimeSpan.FromMilliseconds(milliseconds),
+                _ => throw new ArgumentException($"Invalid precision: {precision}")
+            };
+
+            return new IonTimestamp(dateTime, _annotations);
+        }
+
+        public IonTimestamp SwitchOffset(TimeSpan newOffset)
+        {
+            if (Value is null)
+                return new IonTimestamp(null, _annotations);
+
+            return new IonTimestamp(
+                new DateTimeOffset(Value.Value.DateTime, newOffset),
+                _annotations);
+        }
+
         public static implicit operator IonTimestamp(DateTimeOffset? value) => new IonTimestamp(value);
+
+        #region Nested types
+        public enum Precision
+        {
+            Year,
+            Month,
+            Day,
+            Minute,
+            Second,
+            Millisecond
+        }
+        #endregion
     }
 }

@@ -9,18 +9,14 @@
   
 
   <ItemGroup>
-    <EmbeddedResource Include="IO\IonGrammar.xbnf" />
+    <EmbeddedResource Include="IO\Text\IonGrammar.xbnf" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Axis.Luna.Common" Version="6.0.4" />
-    <PackageReference Include="Axis.Luna.Extensions" Version="6.0.3" />
-    <PackageReference Include="Axis.Pulsar.Grammar" Version="0.7.2" />
-    <PackageReference Include="Axis.Pulsar.Languages" Version="0.7.2" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="IO\Text\" />
+    <PackageReference Include="Axis.Luna.Common" Version="6.0.5" />
+    <PackageReference Include="Axis.Luna.Extensions" Version="6.0.4" />
+    <PackageReference Include="Axis.Pulsar.Grammar" Version="0.7.5" />
+    <PackageReference Include="Axis.Pulsar.Languages" Version="0.7.3" />
   </ItemGroup>
 
 </Project>

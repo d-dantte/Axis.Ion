@@ -158,10 +158,20 @@ ergo 16 bytes of data. This means decimal values have a fixed 17byte size.
 
 ### Custom-Metadata
 - null: `[..1.-0101]`
+- regular float: `[....-0101]`
+- nan: `[.1..-0101]`
+- pinf: `[1...-0101]`
+- ninf: `[11..-0101]`
 
 ### Description
 As with [decimal](#Ion-Decimal) above, floats have a fixed-sized, striaghtfowrard representation in binary. Floats need
 total of 9 bytes: 1 for type-metadata, 8 for float data.
+For the values - `nan`, `positive-infinity`, `negative-infinity`, the following conventions are used to store them within
+the custom-metadata:
+1. (00) - represents a regular float, meaning all 9 bytes are used for storage.
+2. (01) - represents a "nan" value. In this state, Only the metadata byte is used.
+3. (10) - represents a "positive infinity" value. Same as above: only the metadata is used.
+4. (11) - represents a "negative infinity" value. Same as above applies.
 
 
 ## Ion-Timestamp
@@ -175,16 +185,29 @@ total of 9 bytes: 1 for type-metadata, 8 for float data.
 - null: `[..1.-0110]`
 
 ### Description
-The timestamp is made of 8 components, each with their own binary representation, the first 2 of which are mandatory.
+The timestamp is made of 7 components, each with their own binary representation, the first 2 of which are mandatory.
+In practice, however, there are actually only 5 components, because the `Hour`, `Minute` and `Second` components
+are stored as a unit of seconds, using 3 bytes.
+
+The timestamp's first data byte holds information regarding what optional components are present (or absent). This is
+done using the first (lower-end) 3 bits. The remaining bits are reserved for the following use.
+
+The 4th bit (index 3) is reserved for use by the `HMS` (Hour, Minute, Second) component. There are a total of _86,400_
+seconds in a day, this needs exactly 17 bits to be represented. Since 3 bytes holds 24 bits, there'll be a total of 7
+unused bits in the 3rd byte if 3 whole bytes are used to store the information. To mitigate this, the 17th bit is
+"borrowed" from the 4th bit of the component-byte.
+
+Bits 5 - 8 (index 4 - 7) are reserved for the "ticks" component of the timestamp. The ticks component requires 20 bits
+to store it's information: this is 8 + 8 + 4, i.e 2 bytes, and 4 bits. The 4 bits are "borrowed" from the component
+byte.
+
 The following lists the components in the order they appear:
-1. Components flag: represented by a regular byte. The first 7 bits represents the presence of the corresponding component.
+1. Components flags: 1 byte
 2. Year: The year component is represented by a [var-byte](#var-byte)
-3. Month: represented by a regular byte.
-4. Day: represented by a regular byte.
-5. Hour: represented by a regular byte.
-6. Minute: represented by a regular byte
-7. Seconds: represented by a regular byte
-8. Ticks: represented by an int (4 regular bytes)
+3. Month: represented by 1 byte.
+4. Day: represented by 1 optional byte
+5. HMS (hour, minute, seconds): 17 optional bits (2 bytes, and one reserved bit)
+8. Ticks/Sub-second: represented by 1 optional int (3 bytes). 1 second = 10,000,000 ticks.
 
 Writing/reading the timestamp uses the component flags to figure, in order, what component is found at what position.
 
@@ -208,18 +231,31 @@ and is represented as a `var-byte`.
 ## Ion-Symbols
 
 ### Type-Metadata
-- `[....-1000]`
+- `[....-1000]` (operator)
 - 8 (dec)
 - 0x8 (hex)
 
+- `[....-1001]` (identifier)
+- 9 (dec)
+- 0x9 (hex)
+
+- `[....-1010]` (quoted symbol)
+- 10 (dec)
+- 0xA (hex)
+
 ### Custom-Metadata
-- null: `[..1.-1000]`
-- operator: `[01..-1000]`
-- quoted symbol: `[10..-1000]`
-- identifier: `[11..-1000]`
+- null: `[..1.-....]`
+- raw: `[00..-....]`
+- Int8 id: `[01..-....]`
+- Int16 id: `[10..-....]`
+- Intxx id: `[11..-....]
+- 1-char-operator: `[00..-....]`
+- 2-char-operator: `[01..-....]`
+- 3-char-operator: `[10..-....]`
+- x-char-operator: `[11..-....]`
 
 ### Description
-Symbols in binary have 3 states (listed in the custom-metadata section).
+Symbols in binary have 4 states (listed in the metadata section).
 1. Operand: In this form, the operator symbol is represented by a single byte. There are a total of 19 operator symbols
    supported by ion. Each one is represented by it's ordinal value:
    1.  Exclamation
@@ -240,19 +276,26 @@ Symbols in binary have 3 states (listed in the custom-metadata section).
    16. Caret      
    17. BTick      
    18. Pipe       
-   19. Tilde    
+   19. Tilde 
+   Operators are a sequence of one or more or the above characters, and so are stored using a similar technique as [ion-int](#ion-int).
+   The symbols are represented as a single ascii byte, and stored contiguously with the char-count represented using the custom-metadata,
+   or a `var-int`.
 2. Quoted symbol: In this form, following the type-metadata is a series of `var-bytes` that represent the number of
-   unicode characters present in the symbol. Beyond the count, are the bytes for the unicode characters.
+   unicode characters present in the symbol. Beyond the count, are the bytes for the unicode characters. Note that
+   the quotes aren't serialized, as they are implied by the type itself
 3. Identifier: Similar to `quoted symbol` except for allowing only a limited set of characters.
    See [here](https://amazon-ion.github.io/ion-docs/docs/spec.html#symbol).
+4. ID: The ID state exists when a quoted/identifier symbol has extra information stored in the custom-metadata section
+   of the metadata byte. The information here represents the number of bytes needed to store the value of the symbol's
+   ID.
 	
 
 ## Ion Blob
 
 ### Type-Metadata
-- `[....-1001]`
-- 9 (dec)
-- 0x9 (hex)
+- `[....-1011]`
+- 11 (dec)
+- 0xB (hex)
 
 ### Custom-Metadata
 - null: `[..1.-1001]`
@@ -265,9 +308,9 @@ Following the `var-bytes` are the actual byte array
 ## Ion Clob
 
 ### Type-Metadata
-- `[....-1010]`
-- 10 (dec)
-- 0xA (hex)
+- `[....-1100]`
+- 12 (dec)
+- 0xC (hex)
 
 ### Custom-Metadata
 - null: `[..1.-1010]`
@@ -279,9 +322,9 @@ Same as [ion-blob](#ion-blob) above, except that the bytes represent unicode cha
 ## Ion List
 
 ### Type-Metadata
-- `[....-1011]`
-- 11 (dec)
-- 0xB (hex)
+- `[....-1101]`
+- 13 (dec)
+- 0xD (hex)
 
 ### Custom-Metadata
 - null: `[..1.-1011]`
@@ -294,9 +337,9 @@ Each item is an ion-value.
 ## Ion Sexp
 
 ### Type-Metadata
-- `[....-1100]`
-- 12 (dec)
-- 0xC (hex)
+- `[....-1110]`
+- 14 (dec)
+- 0xE (hex)
 
 ### Custom-Metadata
 - null: `[..1.-1100]`
@@ -308,9 +351,9 @@ The sexp is exactly the same as to the [ion-list](#ion-list), except that operan
 ## Ion Struct
 
 ### Type-Metadata
-- `[....-1101]`
-- 13 (dec)
-- 0xD (hex)
+- `[....-1111]`
+- 15 (dec)
+- 0xF (hex)
 
 ### Custom-Metadata
 - null: `[..1.-1101]`

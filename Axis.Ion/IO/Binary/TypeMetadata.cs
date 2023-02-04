@@ -1,9 +1,10 @@
-﻿using Axis.Ion.Types;
+﻿using Axis.Ion.IO.Binary.Payload;
+using Axis.Ion.Types;
+using Axis.Ion.Utils;
 using Axis.Luna.Extensions;
 using System;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace Axis.Ion.IO.Binary
 {
@@ -67,17 +68,18 @@ namespace Axis.Ion.IO.Binary
 
         public override int GetHashCode() => _metadata.GetHashCode();
 
+        #region metadata
         /// <summary>
         /// Serializes the metadata of the <see cref="IIonType"/>
         /// </summary>
         /// <param name="ionType">The ion type</param>
         /// <returns>The metadata byte</returns>
-        public static byte ToMetadataByte(IIonType ionType)
+        public static byte SerializeMetadata(IIonType ionType)
         {
-            var metadatabyte = (byte)ionType.Type;
+            byte metadatabyte = (byte)ionType.Type;
 
             // annotated?
-            var mask = ionType.Annotations.Length > 0
+            byte mask = ionType.Annotations.Length > 0
                 ? AnnotationMask
                 : (byte)0;
             metadatabyte |= mask;
@@ -91,12 +93,27 @@ namespace Axis.Ion.IO.Binary
             return metadatabyte;
         }
 
+        public static TypeMetadata ReadMetadata(Stream inputStream)
+        {
+            var metadatabyte = inputStream.ReadByte();
+
+            if (metadatabyte < 0)
+                throw new EndOfStreamException();
+
+            return (byte)metadatabyte;
+        }
+        #endregion
+
+        #region annotations
         /// <summary>
         /// Serializes the annotations, if present. If absent, returns an empty byte array
         /// </summary>
         /// <param name="ionType">The ion type</param>
         /// <returns>The serialized annotations</returns>
-        public static byte[] ToAnnotationData(IIonType ionType)
+        public static byte[] SerializeAnnotationData(
+            IIonType ionType,
+            SerializerOptions options,
+            SymbolHashList symbolTable)
         {
             var memory = new MemoryStream();
 
@@ -107,9 +124,12 @@ namespace Axis.Ion.IO.Binary
                 memory.Write(ionType.Annotations.Length.ToVarBytes());
 
                 ionType.Annotations
-                    .Select(annotation => IIonSymbol.Of(annotation.Value))
-                    .Select(annotationSymbol => new IonSymbolPayload(annotationSymbol))
-                    .ForAll(payload => payload.Write(memory));
+                    .Select(annotation =>
+                    {
+                        var symbol = annotation.ToSymbol();
+                        return new IonSymbolPayload(symbolTable.AddOrGetID(symbol));
+                    })
+                    .ForAll(payload => ITypePayload.Write(memory, payload, options, symbolTable));
 
                 memory.Flush();
             }
@@ -117,27 +137,10 @@ namespace Axis.Ion.IO.Binary
             return memory.ToArray();
         }
 
-        /// <summary>
-        /// Combines the metadata byte and the serialized annotations.
-        /// </summary>
-        /// <param name="ionType">the ion type</param>
-        /// <returns>A combination of the metadata byte, and the serialized annotations</returns>
-        public static (byte metadata, byte[] annotations) ToTypeComponents(IIonType ionType)
-        {
-            return (ToMetadataByte(ionType), ToAnnotationData(ionType));
-        }
-
-        public static TypeMetadata ReadMetadata(Stream inputStream)
-        {
-            var metadatabyte = inputStream.ReadByte();
-
-            if (metadatabyte < 0)
-                throw new EndOfStreamException();
-
-            return (byte)metadatabyte;
-        }
-
-        public static IIonType.Annotation[] ReadAnnotations(Stream stream)
+        public static IIonType.Annotation[] ReadAnnotations(
+            Stream stream,
+            SerializerOptions options,
+            SymbolHashList symbolTable)
         {
             var annotationCount = stream.ReadVarByteInteger();
             return annotationCount
@@ -150,31 +153,13 @@ namespace Axis.Ion.IO.Binary
                         throw new InvalidDataException("Invalid annotation metadata");
 
                     return IonSymbolPayload
-                        .Read(metadata, stream)
-                        .ApplyTo(payload => new IIonType.Annotation(payload.IonValue as IIonSymbol));
+                        .Read(stream, metadata, options, symbolTable)
+                        .ApplyTo(payload => payload.IonType.ToIonText())
+                        .ApplyTo(IIonType.Annotation.Parse);
                 })
                 .ToArray();
         }
-
-        public static async Task<IIonType.Annotation[]> ReadAnnotationsAsync(Stream stream)
-        {
-            var annotationCount = stream.ReadVarByteInteger();
-            return await annotationCount
-                .RepeatApply(count =>
-                {
-                    var metadata = ReadMetadata(stream);
-
-                    // verify that this annotation-symbol doesn't have it's own annotation
-                    if (metadata.HasAnnotations)
-                        throw new InvalidDataException("Invalid annotation metadata");
-
-                    return IonSymbolPayload
-                        .ReadAsync(metadata, stream)
-                        .ApplyTo(async payload => new IIonType.Annotation((await payload).IonValue as IIonSymbol));
-                })
-                .ApplyTo(Task.WhenAll);
-        }
-
+        #endregion
 
         #region operator overloads
         public static implicit operator TypeMetadata(byte value) => new TypeMetadata(value);
