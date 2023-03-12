@@ -1,18 +1,27 @@
 ﻿using Axis.Ion.IO.Text.Streamers;
 using Axis.Ion.Types;
 using Axis.Luna.Common;
+using Axis.Luna.Extensions;
+using Axis.Pulsar.Grammar;
 using Axis.Pulsar.Grammar.CST;
 using Axis.Pulsar.Grammar.Language;
 using Axis.Pulsar.Grammar.Language.Rules.CustomTerminals;
 using Axis.Pulsar.Languages.xBNF;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
 using static Axis.Pulsar.Grammar.Language.Rules.CustomTerminals.DelimitedString;
 
 namespace Axis.Ion.IO.Text
 {
+    /// <summary>
+    /// Ion Text serializer type.
+    /// </summary>
     public class TextSerializer : IIonSerializer
     {
+        public const string IonSymbol = "ion";
         public const string IonValueSymbol = "ion-value";
         public const string IonNullSymbol = "ion-null";
         public const string IonBoolSymbol = "ion-bool";
@@ -77,52 +86,95 @@ namespace Axis.Ion.IO.Text
             SerializerOptions = options ?? new SerializerOptions();
         }
 
+        /// <summary>
+        /// Deserializes a stream of <see cref="Encoding.Unicode"/> bytes into an <see cref="IonPacket"/> instance
+        /// </summary>
+        /// <param name="ionStream">The <see cref="Encoding.Unicode"/> byte stream</param>
+        /// <returns>The ion packet</returns>
         public IonPacket Deserialize(Stream ionStream)
         {
-            throw new NotImplementedException();
+            if (ionStream is null)
+                throw new ArgumentNullException(nameof(ionStream));
+
+            var bufferedReader = new BufferedTokenReader(ToCharacterEnumerable(ionStream));
+            var recognition = IonGrammar
+                .GetRecognizer(IonSymbol)
+                .Recognize(bufferedReader);
+
+            _ = recognition.TryParseRecognition<IonPacket>(TryParseIonPacket, out var result);
+            return result.Resolve();
         }
 
+        /// <summary>
+        /// Serializes an ion packet instance into an array of <see cref="Encoding.Unicode"/> encoded bytes
+        /// </summary>
+        /// <param name="ionPacket">The <see cref="IonPacket"/> instance to serialize</param>
+        /// <returns>The byte array</returns>
         public byte[] Serialize(IonPacket ionPacket)
         {
-            throw new NotImplementedException();
+            var context = new SerializingContext(SerializerOptions);
+            var ionText = ionPacket.IonValues
+                .Select(value => SerializeText(value, context))
+                .JoinUsing(Environment.NewLine);
+
+            return Encoding.Unicode.GetBytes(ionText);
         }
 
-
-        internal static string StreamText(IIonType ionValue, StreamingContext context)
+        /// <summary>
+        /// Serialize the given value into text
+        /// </summary>
+        /// <param name="ionValue">the ion value</param>
+        /// <param name="context">the context to serialize with</param>
+        /// <returns>the serialized string</returns>
+        /// <exception cref="ArgumentException">if the ion value is invalid</exception>
+        internal static string SerializeText(IIonType ionValue, SerializingContext context)
         {
             return ionValue switch
             {
-                IonNull @null => new IonNullStreamer().StreamText(@null, context),
-                IonBool @bool => new IonBoolStreamer().StreamText(@bool, context),
-                IonInt @int => new IonIntStreamer().StreamText(@int, context),
-                IonFloat @float => new IonFloatStreamer().StreamText(@float, context),
-                IonDecimal @decimal => new IonDecimalStreamer().StreamText(@decimal, context),
-                IonTimestamp timestamp => new IonTimestampStreamer().StreamText(timestamp, context),
-                IonString @string => new IonStringStreamer().StreamText(@string, context),
-                IonQuotedSymbol quoted => new IonQuotedSymbolStreamer().StreamText(quoted, context),
-                IonIdentifier identifier => new IonIdentifierStreamer().StreamText(identifier, context),
-                IonOperator @operator => new IonOperatorStreamer().StreamText(@operator, context),
-                IonBlob blob => new IonBlobStreamer().StreamText(blob, context),
-                IonClob clob => new IonClobStreamer().StreamText(clob, context),
-                IonList list => new IonListStreamer().StreamText(list, context),
-                IonSexp sexp => new IonSexpStreamer().StreamText(sexp, context),
-                IonStruct @struct => new IonStructStreamer().StreamText(@struct, context),
+                IonNull @null => new IonNullSerializer().SerializeText(@null, context),
+                IonBool @bool => new IonBoolSerializer().SerializeText(@bool, context),
+                IonInt @int => new IonIntSerializer().SerializeText(@int, context),
+                IonFloat @float => new IonFloatSerializer().SerializeText(@float, context),
+                IonDecimal @decimal => new IonDecimalSerializer().SerializeText(@decimal, context),
+                IonTimestamp timestamp => new IonTimestampSerializer().SerializeText(timestamp, context),
+                IonString @string => new IonStringSerializer().SerializeText(@string, context),
+                IonQuotedSymbol quoted => new IonQuotedSymbolSerializer().SerializeText(quoted, context),
+                IonIdentifier identifier => new IonIdentifierSerializer().SerializeText(identifier, context),
+                IonOperator @operator => new IonOperatorSerializer().SerializeText(@operator, context),
+                IonBlob blob => new IonBlobSterializer().SerializeText(blob, context),
+                IonClob clob => new IonClobSerializer().SerializeText(clob, context),
+                IonList list => new IonListSerializer().SerializeText(list, context),
+                IonSexp sexp => new IonSexpSerializer().SerializeText(sexp, context),
+                IonStruct @struct => new IonStructSerializer().SerializeText(@struct, context),
                 _ => throw new ArgumentException($"Invalid ion value: {ionValue}")
             };
         }
 
+        /// <summary>
+        /// Parse the given string into an ion type
+        /// </summary>
+        /// <param name="ionText">the string</param>
+        /// <param name="result">the result</param>
+        /// <returns>true if successful, false otherwise</returns>
         internal static bool TryParse(string ionText, out IResult<IIonType> result)
         {
             var recognition = IonGrammar
                 .GetRecognizer(IonValueSymbol)
                 .Recognize(ionText);
 
-            return recognition.TryParseRecognition(TryParse, out result);
+            return recognition.TryParseRecognition(TryParseIonValueToken, out result);
         }
 
-        internal static bool TryParse(CSTNode node, out IResult<IIonType> result)
+        /// <summary>
+        /// Attempts the parse the given <see cref="CSTNode"/>, assumed to originate from the IonGrammar.xbnf spec
+        /// </summary>
+        /// <param name="ionToken">The cstnode with symbol-name: "ion-value"</param>
+        /// <param name="result">The result of the parse operation</param>
+        /// <returns>True if successful, false otherwise</returns>
+        /// <exception cref="ArgumentException">If the <paramref name="ionToken"/> is problematic</exception>
+        internal static bool TryParseIonValueToken(CSTNode ionValueToken, out IResult<IIonType> result)
         {
-            var ionToken = node.FirstNode();
+            var ionToken = ionValueToken.FirstNode();
             result = ionToken.SymbolName switch
             {
                 IonNullSymbol => Parse<IonNull>(ionToken),
@@ -149,15 +201,25 @@ namespace Axis.Ion.IO.Text
             return result is IResult<IIonType>.DataResult;
         }
 
+        /// <summary>
+        /// Parse the given string, using the IonGrammar.xbnf spec
+        /// </summary>
+        /// <param name="ionText">The text to parse</param>
+        /// <returns>returns the parsed value</returns>
         internal static IIonType Parse(string ionText)
         {
             _ = TryParse(ionText, out var result);
             return result.Resolve();
         }
 
-        internal static IIonType Parse(CSTNode node)
+        /// <summary>
+        /// Parse the given node, using the IonGrammar.xbnf spec
+        /// </summary>
+        /// <param name="ionValue">The cstnode with symbol-name: "ion-value"</param>
+        /// <returns>returns the parsed value</returns>
+        internal static IIonType ParseIonValueToken(CSTNode ionValue)
         {
-            _ = TryParse(node, out var result);
+            _ = TryParseIonValueToken(ionValue, out var result);
             return result.Resolve();
         }
 
@@ -168,91 +230,91 @@ namespace Axis.Ion.IO.Text
 
             if (typeof(TIonType).Equals(typeof(IonNull)))
             {
-                _ = new IonNullStreamer().TryParse(node, out var result);
+                _ = new IonNullSerializer().TryParse(node, out var result);
                 return result.Map<IIonType>(v => v);
             }
 
             if (typeof(TIonType).Equals(typeof(IonBool)))
             {
-                _ = new IonBoolStreamer().TryParse(node, out var result);
+                _ = new IonBoolSerializer().TryParse(node, out var result);
                 return result.Map<IIonType>(v => v);
             }
 
             if (typeof(TIonType).Equals(typeof(IonInt)))
             {
-                _ = new IonIntStreamer().TryParse(node, out var result);
+                _ = new IonIntSerializer().TryParse(node, out var result);
                 return result.Map<IIonType>(v => v);
             }
 
             if (typeof(TIonType).Equals(typeof(IonFloat)))
             {
-                _ = new IonFloatStreamer().TryParse(node, out var result);
+                _ = new IonFloatSerializer().TryParse(node, out var result);
                 return result.Map<IIonType>(v => v);
             }
 
             if (typeof(TIonType).Equals(typeof(IonDecimal)))
             {
-                _ = new IonDecimalStreamer().TryParse(node, out var result);
+                _ = new IonDecimalSerializer().TryParse(node, out var result);
                 return result.Map<IIonType>(v => v);
             }
 
             if (typeof(TIonType).Equals(typeof(IonTimestamp)))
             {
-                _ = new IonTimestampStreamer().TryParse(node, out var result);
+                _ = new IonTimestampSerializer().TryParse(node, out var result);
                 return result.Map<IIonType>(v => v);
             }
 
             if (typeof(TIonType).Equals(typeof(IonString)))
             {
-                _ = new IonStringStreamer().TryParse(node, out var result);
+                _ = new IonStringSerializer().TryParse(node, out var result);
                 return result.Map<IIonType>(v => v);
             }
 
             if (typeof(TIonType).Equals(typeof(IonOperator)))
             {
-                _ = new IonOperatorStreamer().TryParse(node, out var result);
+                _ = new IonOperatorSerializer().TryParse(node, out var result);
                 return result.Map<IIonType>(v => v);
             }
 
             if (typeof(TIonType).Equals(typeof(IonIdentifier)))
             {
-                _ = new IonIdentifierStreamer().TryParse(node, out var result);
+                _ = new IonIdentifierSerializer().TryParse(node, out var result);
                 return result.Map<IIonType>(v => v);
             }
 
             if (typeof(TIonType).Equals(typeof(IonQuotedSymbol)))
             {
-                _ = new IonQuotedSymbolStreamer().TryParse(node, out var result);
+                _ = new IonQuotedSymbolSerializer().TryParse(node, out var result);
                 return result.Map<IIonType>(v => v);
             }
 
             if (typeof(TIonType).Equals(typeof(IonBlob)))
             {
-                _ = new IonBlobStreamer().TryParse(node, out var result);
+                _ = new IonBlobSterializer().TryParse(node, out var result);
                 return result.Map<IIonType>(v => v);
             }
 
             if (typeof(TIonType).Equals(typeof(IonClob)))
             {
-                _ = new IonClobStreamer().TryParse(node, out var result);
+                _ = new IonClobSerializer().TryParse(node, out var result);
                 return result.Map<IIonType>(v => v);
             }
 
             if (typeof(TIonType).Equals(typeof(IonList)))
             {
-                _ = new IonListStreamer().TryParse(node, out var result);
+                _ = new IonListSerializer().TryParse(node, out var result);
                 return result.Map<IIonType>(v => v);
             }
 
             if (typeof(TIonType).Equals(typeof(IonSexp)))
             {
-                _ = new IonSexpStreamer().TryParse(node, out var result);
+                _ = new IonSexpSerializer().TryParse(node, out var result);
                 return result.Map<IIonType>(v => v);
             }
 
             if (typeof(TIonType).Equals(typeof(IonStruct)))
             {
-                _ = new IonStructStreamer().TryParse(node, out var result);
+                _ = new IonStructSerializer().TryParse(node, out var result);
                 return result.Map<IIonType>(v => v);
             }
 
@@ -268,6 +330,30 @@ namespace Axis.Ion.IO.Text
 
             symbolToken = ionToken.FindNode($"{IonOperatorSymbol}|{IonIdentifierSymbol}|{IonQuotedSymbol}");
             return symbolToken?.SymbolName;
+        }
+
+        private static IEnumerable<char> ToCharacterEnumerable(Stream ionStream)
+        {
+            var reader = new StreamReader(ionStream, Encoding.Unicode);
+            var @char = -1;
+
+            while ((@char = reader.Read()) != -1)
+                yield return (char)@char;
+        }
+
+        private static bool TryParseIonPacket(CSTNode ionToken, out IResult<IonPacket> result)
+        {
+            result = ionToken
+                .FindNodes(IonValueSymbol)
+                .Select(node =>
+                {
+                    _ = TryParseIonValueToken(node, out var result);
+                    return result;
+                })
+                .Fold()
+                .Map(values => new IonPacket(values.ToArray()));
+
+            return result is IResult<IonPacket>.DataResult;
         }
     }
 }

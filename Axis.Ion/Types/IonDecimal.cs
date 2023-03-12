@@ -6,7 +6,7 @@ using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
-    public readonly struct IonDecimal : IIonValueType<decimal?>
+    public readonly struct IonDecimal : IStructValue<decimal>
     {
         private readonly IIonType.Annotation[] _annotations;
 
@@ -24,12 +24,19 @@ namespace Axis.Ion.Types
                 .ToArray();
         }
 
+        /// <summary>
+        /// Creates a null instance of the <see cref="IonDecimal"/>
+        /// </summary>
+        /// <param name="annotations">any available annotation</param>
+        /// <returns>The newly created null instance</returns>
+        public static IonDecimal Null(params IIonType.Annotation[] annotations) => new IonDecimal(null, annotations);
+
 
         #region IIonType
 
         public bool IsNull => Value == null;
 
-        public bool ValueEquals(IIonValueType<decimal?> other) => Value == other?.Value == true;
+        public bool ValueEquals(IStructValue<decimal> other) => Value == other?.Value == true;
 
         public string ToIonText() => Value != null
             ? Value.Value.ToExponentNotation("D")

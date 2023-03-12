@@ -5,7 +5,7 @@ using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
-    public readonly struct IonBool : IIonValueType<bool?>
+    public readonly struct IonBool : IStructValue<bool>
     {
         private readonly IIonType.Annotation[] _annotations;
 
@@ -23,12 +23,19 @@ namespace Axis.Ion.Types
                 .ToArray();
         }
 
+        /// <summary>
+        /// Creates a null instance of the <see cref="IonBool"/>
+        /// </summary>
+        /// <param name="annotations">any available annotation</param>
+        /// <returns>The newly created null instance</returns>
+        public static IonBool Null(params IIonType.Annotation[] annotations) => new IonBool(null, annotations);
+
 
         #region IIonType
 
         public bool IsNull => Value == null;
 
-        public bool ValueEquals(IIonValueType<bool?> other) => Value.NullOrEquals(other.Value);
+        public bool ValueEquals(IStructValue<bool> other) => Value.NullOrEquals(other.Value);
 
         public string ToIonText() => Value?.ToString() ?? "null.bool";
 

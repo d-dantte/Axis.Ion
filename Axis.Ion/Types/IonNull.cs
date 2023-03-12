@@ -20,6 +20,13 @@ namespace Axis.Ion.Types
                 .ToArray();
         }
 
+        /// <summary>
+        /// Creates a null instance of the <see cref="IonNull"/>
+        /// </summary>
+        /// <param name="annotations">any available annotation</param>
+        /// <returns>The newly created null instance</returns>
+        public static IonNull Null(params IIonType.Annotation[] annotations) => new IonNull(annotations);
+
         #region IIonType
 
         public bool IsNull => true;

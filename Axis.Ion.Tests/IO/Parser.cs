@@ -15,12 +15,7 @@ namespace Axis.Ion.Tests.IO
         {
             try
             {
-                using var ionXbnfStream = typeof(TextSerializer).Assembly
-                    .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-                var importer = new Importer();
-                var ionGrammar = importer
-                    .ImportGrammar(ionXbnfStream);
+                var ionGrammar = TextSerializer.IonGrammar;
 
                 Assert.IsNotNull(ionGrammar);
                 Assert.AreEqual("ion", ionGrammar.RootSymbol);
@@ -35,11 +30,7 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestAnnotation()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var annotationParser = ionGrammar.GetRecognizer("annotation-list");
             Assert.IsNotNull(annotationParser);
@@ -58,11 +49,7 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestNull()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var nullParser = ionGrammar.GetRecognizer("ion-null");
             Assert.IsNotNull(nullParser);
@@ -81,11 +68,7 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestBool()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var recognizer = ionGrammar.GetRecognizer("ion-bool");
             Assert.IsNotNull(recognizer);
@@ -125,11 +108,7 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestInt()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var recognizer = ionGrammar.GetRecognizer("ion-int");
             Assert.IsNotNull(recognizer);
@@ -162,11 +141,7 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestFloat()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var recognizer = ionGrammar.GetRecognizer("ion-float");
             Assert.IsNotNull(recognizer);
@@ -209,11 +184,7 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestDecimal()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var recognizer = ionGrammar.GetRecognizer("ion-decimal");
             Assert.IsNotNull(recognizer);
@@ -270,11 +241,7 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestTimestamp()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var recognizer = ionGrammar.GetRecognizer("ion-timestamp");
             Assert.IsNotNull(recognizer);
@@ -351,11 +318,7 @@ namespace Axis.Ion.Tests.IO
         [TestMethod]
         public void TestString()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var recognizer = ionGrammar.GetRecognizer("ion-string");
             Assert.IsNotNull(recognizer);
@@ -385,35 +348,16 @@ namespace Axis.Ion.Tests.IO
             Assert.IsNotNull(success);
             Assert.AreEqual(@"""\ua342""", success.Symbol.TokenValue());
 
-            result = recognizer.Recognize(new BufferedTokenReader(@"""
-stuff
-other stuff
-multiline stuff
-"""));
+            result = recognizer.Recognize(@"'''bleh''' '''other bleh'''");
             success = result as SuccessResult;
             Assert.IsNotNull(success);
-            Assert.AreEqual(@"""
-stuff
-other stuff
-multiline stuff
-""", success.Symbol.TokenValue());
-
-            result = recognizer.Recognize(@"('''bleh''' '''other bleh''')");
-            result = recognizer.Recognize(@"('''bleh''' '''other bleh''')");
-            result = recognizer.Recognize(@"('''bleh''' '''other bleh''')");
-            success = result as SuccessResult;
-            Assert.IsNotNull(success);
-            Assert.AreEqual(@"('''bleh''' '''other bleh''')", success.Symbol.TokenValue());
+            Assert.AreEqual(@"'''bleh''' '''other bleh'''", success.Symbol.TokenValue());
         }
 
         [TestMethod]
         public void TestSymbol()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var recognizer = ionGrammar.GetRecognizer("ion-symbol");
             Assert.IsNotNull(recognizer);
@@ -446,11 +390,7 @@ multiline stuff
         [TestMethod]
         public void TestBlob()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var recognizer = ionGrammar.GetRecognizer("ion-blob");
             Assert.IsNotNull(recognizer);
@@ -473,11 +413,7 @@ multiline stuff
         [TestMethod]
         public void TestClob()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var recognizer = ionGrammar.GetRecognizer("ion-clob");
             Assert.IsNotNull(recognizer);
@@ -500,11 +436,7 @@ multiline stuff
         [TestMethod]
         public void TestList()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var recognizer = ionGrammar.GetRecognizer("ion-list");
             Assert.IsNotNull(recognizer);
@@ -537,11 +469,7 @@ multiline stuff
         [TestMethod]
         public void TestStruct()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var recognizer = ionGrammar.GetRecognizer("ion-struct");
             Assert.IsNotNull(recognizer);
@@ -573,11 +501,7 @@ multiline stuff
         [TestMethod]
         public void TestSexp()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var recognizer = ionGrammar.GetRecognizer("ion-sexp");
             Assert.IsNotNull(recognizer);
@@ -598,11 +522,7 @@ multiline stuff
         [TestMethod]
         public void TestBlockComments()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var recognizer = ionGrammar.GetRecognizer("block-comment");
             Assert.IsNotNull(recognizer);
@@ -617,11 +537,7 @@ multiline stuff
         [TestMethod]
         public void TestLineComments()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var recognizer = ionGrammar.GetRecognizer("line-comment");
             Assert.IsNotNull(recognizer);
@@ -636,11 +552,7 @@ multiline stuff
         [TestMethod]
         public void TestBlockSpace()
         {
-            using var ionXbnfStream = typeof(TextSerializer).Assembly
-                .GetManifestResourceStream($"{typeof(TextSerializer).Namespace}.IonGrammar.xbnf");
-
-            var ionGrammar = new Importer()
-                .ImportGrammar(ionXbnfStream);
+            var ionGrammar = TextSerializer.IonGrammar;
 
             var recognizer = ionGrammar.GetRecognizer("block-space");
             Assert.IsNotNull(recognizer);

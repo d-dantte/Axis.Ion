@@ -9,7 +9,7 @@ namespace Axis.Ion.Types
     /// <summary>
     /// Represents a stream of ASCII encoded bytes of characters
     /// </summary>
-    public readonly struct IonClob : IIonValueType<byte[]?>
+    public readonly struct IonClob : IRefValue<byte[]>
     {
         private readonly IIonType.Annotation[] _annotations;
         private readonly byte[]? _clob;
@@ -28,12 +28,19 @@ namespace Axis.Ion.Types
                 .ToArray();
         }
 
+        /// <summary>
+        /// Creates a null instance of the <see cref="IonClob"/>
+        /// </summary>
+        /// <param name="annotations">any available annotation</param>
+        /// <returns>The newly created null instance</returns>
+        public static IonClob Null(params IIonType.Annotation[] annotations) => new IonClob(null, annotations);
+
 
         #region IIonType
 
         public bool IsNull => Value == null;
 
-        public bool ValueEquals(IIonValueType<byte[]?> other)
+        public bool ValueEquals(IRefValue<byte[]> other)
             => other.Value.NullOrTrue(Value, Enumerable.SequenceEqual);
 
         public string ToIonText()

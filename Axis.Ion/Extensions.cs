@@ -1,13 +1,11 @@
-﻿using Axis.Ion.IO.Binary;
-using Axis.Ion.Types;
+﻿using Axis.Ion.Types;
 using Axis.Ion.Utils;
 using Axis.Luna.Extensions;
+using Axis.Luna.FInvoke;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using static Axis.Ion.Types.IIonType;
 
 namespace Axis.Ion
@@ -17,6 +15,61 @@ namespace Axis.Ion
     /// </summary>
     internal static class Extensions
     {
+        internal static object? IonValue(this IIonType ion)
+        {
+            if (ion is null)
+                throw new ArgumentNullException(nameof(ion));
+
+            return ion switch
+            {
+                IonNull => null,
+                IonBool @bool => @bool.Value,
+                IonInt @int => @int.Value,
+                IonFloat @float => @float.Value,
+                IonDecimal @decimal => @decimal.Value,
+                IonTimestamp timestamp => timestamp.Value,
+                IonString @string => @string.Value,
+                IonOperator @operator => @operator.Value,
+                IonIdentifier identifier => identifier.Value,
+                IonQuotedSymbol quoted => quoted.Value,
+                IonClob clob => clob.Value,
+                IonBlob blob => blob.Value,
+                IonSexp sexp => sexp.Value,
+                IonList list => list.Value,
+                IonStruct @struct => @struct.Value,
+                _ => throw new ArgumentException($"Invalid ion: {ion}")
+            };
+        }
+
+        internal static T FirstOrThrow<T>(this IEnumerable<T> enumerable, Exception exception)
+        {
+            if (enumerable is null)
+                throw new ArgumentNullException(nameof(enumerable));
+
+            exception ??= new Exception();
+
+            using var enumerator = enumerable.GetEnumerator();
+
+            if (enumerator.MoveNext())
+                return enumerator.Current;
+
+            else return exception.Throw<T>();
+        }
+
+        internal static T? FirstOrNull<T>(this IEnumerable<T> enumerable)
+        where T : struct
+        {
+            if (enumerable is null)
+                throw new ArgumentNullException(nameof(enumerable));
+
+            using var enumerator = enumerable.GetEnumerator();
+
+            if (enumerator.MoveNext())
+                return enumerator.Current;
+
+            else return new T?();
+        }
+
         internal static string Reverse(this string value)
         {
             if (string.IsNullOrWhiteSpace(value)
@@ -30,7 +83,7 @@ namespace Axis.Ion
                     .ApplyTo(array => new string(array));
         }
 
-        public static Annotation[] Validate(this Annotation[] annotations)
+        internal static Annotation[] Validate(this Annotation[] annotations)
         {
             if (annotations == null)
                 throw new ArgumentNullException(nameof(annotations));
@@ -41,32 +94,24 @@ namespace Axis.Ion
             return annotations;
         }
 
-        public static string ValidatePropertyName(this string propertyName)
-        {
-            if (IonIdentifier.TryParse(propertyName, out _))
-                return propertyName;
-
-            else throw new FormatException($"Invlid property name: {propertyName}");
-        }
-
-        public static IonValueWrapper Wrap(this IIonType ionType)
+        internal static IonValueWrapper Wrap(this IIonType ionType)
             => new IonValueWrapper(ionType);
 
-        public static DecomposedDecimal Deconstruct(this decimal value) => new DecomposedDecimal(value);
-        public static DecomposedDecimal Deconstruct(this float value) => new DecomposedDecimal(value);
-        public static DecomposedDecimal Deconstruct(this double value) => new DecomposedDecimal(value);
+        internal static DecomposedDecimal Deconstruct(this decimal value) => new DecomposedDecimal(value);
+        internal static DecomposedDecimal Deconstruct(this float value) => new DecomposedDecimal(value);
+        internal static DecomposedDecimal Deconstruct(this double value) => new DecomposedDecimal(value);
 
-        public static bool IsEnumDefined<TEnum>(this TEnum enumValue)
+        internal static bool IsEnumDefined<TEnum>(this TEnum enumValue)
         where TEnum : struct
         {
             return Enum.IsDefined(typeof(TEnum), enumValue);
         }
 
-        public static string AsString(this char[] charArray) => new string(charArray);
+        internal static string AsString(this char[] charArray) => new string(charArray);
 
-        public static string AsString(this IEnumerable<char> charArray) => new string(charArray.ToArray());
+        internal static string AsString(this IEnumerable<char> charArray) => new string(charArray.ToArray());
 
-        public static void Repeat(this int repetitions, Action action)
+        internal static void Repeat(this int repetitions, Action action)
         {
             repetitions = Math.Abs(repetitions);
             for(int cnt = 0; cnt < repetitions; cnt++)
@@ -75,7 +120,7 @@ namespace Axis.Ion
             }
         }
 
-        public static void Repeat(this
+        internal static void Repeat(this
             BigInteger repetitions,
             Action action)
         {
@@ -103,7 +148,7 @@ namespace Axis.Ion
             return;
         }
 
-        public static IEnumerable<TOut> RepeatApply<TOut>(
+        internal static IEnumerable<TOut> RepeatApply<TOut>(
             this BigInteger repetitions,
             Func<BigInteger, TOut> map)
         {
@@ -114,7 +159,7 @@ namespace Axis.Ion
                 yield return map.Invoke(cnt);
         }
 
-        public static IEnumerable<TOut> RepeatApply<TOut>(
+        internal static IEnumerable<TOut> RepeatApply<TOut>(
             this int repetitions,
             Func<int, TOut> map)
         {
@@ -125,7 +170,7 @@ namespace Axis.Ion
                 yield return map.Invoke(cnt);
         }
 
-        public static byte[] GetBytes(this decimal @decimal)
+        internal static byte[] GetBytes(this decimal @decimal)
         {
             return @decimal
                 .ApplyTo(decimal.GetBits)
@@ -133,7 +178,7 @@ namespace Axis.Ion
                 .ToArray();
         }
 
-        public static decimal ToDecimal(this byte[] bytes)
+        internal static decimal ToDecimal(this byte[] bytes)
         {
             if (bytes == null)
                 throw new ArgumentNullException(nameof(bytes));
@@ -149,7 +194,7 @@ namespace Axis.Ion
                 .ApplyTo(intArray => new decimal(intArray));
         }
 
-        public static IEnumerable<(long Index, IEnumerable<T> Batch)> Batch<T>(this
+        internal static IEnumerable<(long Index, IEnumerable<T> Batch)> Batch<T>(this
             IEnumerable<T> values,
             int batchCount,
             bool returnIncompleteTail = true)
@@ -174,20 +219,20 @@ namespace Axis.Ion
                 yield return (index++, batch);
         }
 
-        public static int CastToInt(this BigInteger bigInteger) => (int)bigInteger;
+        internal static int CastToInt(this BigInteger bigInteger) => (int)bigInteger;
 
-        public static long CastToLong(this BigInteger bigInteger) => (long)bigInteger;
+        internal static long CastToLong(this BigInteger bigInteger) => (long)bigInteger;
 
-        public static int HMS(this DateTimeOffset timestamp)
+        internal static int HMS(this DateTimeOffset timestamp)
         {
             return (timestamp.Hour * 3600)
                 +  (timestamp.Minute * 60)
                 +  timestamp.Second;
         }
 
-        public static long TickSeconds(this DateTimeOffset timestamp) => timestamp.TimeOfDay.Ticks % 10_000_000L;
+        internal static long TickSeconds(this DateTimeOffset timestamp) => timestamp.TimeOfDay.Ticks % 10_000_000L;
 
-        public static string ToExponentNotation(this
+        internal static string ToExponentNotation(this
             decimal value,
             string exponentDelimiter = "E",
             ushort maxSignificantDigits = 17)
@@ -198,10 +243,101 @@ namespace Axis.Ion
                 .Replace("E", exponentDelimiter);
         }
 
-        public static string ToExponentNotation(this
+        internal static string ToExponentNotation(this
             double value,
             ushort maxSignificantDigits = 17)
             => new DecomposedDecimal(value).ToScientificNotation(maxSignificantDigits);
+
+        internal static bool IsIntegral(this Type clrType, out Type actualType)
+        {
+            actualType = clrType.IsGenericType && clrType.GetGenericTypeDefinition() == typeof(Nullable<>)
+                ? clrType.GetGenericArguments()[0]
+                : clrType;
+
+            return Type.GetTypeCode(actualType) switch
+            {
+                TypeCode.Int16 => true,
+                TypeCode.UInt16 => true,
+                TypeCode.Int32 => true,
+                TypeCode.UInt32 => true,
+                TypeCode.Int64 => true,
+                TypeCode.UInt64 => true,
+                _ => typeof(BigInteger).Equals(actualType)
+            };
+        }
+
+        internal static bool IsReal(this Type clrType, out Type actualType)
+        {
+            actualType = clrType.IsGenericType && clrType.GetGenericTypeDefinition() == typeof(Nullable<>)
+                ? clrType.GetGenericArguments()[0]
+                : clrType;
+
+            return Type.GetTypeCode(actualType) switch
+            {
+                TypeCode.Single => true,
+                TypeCode.Double => true,
+                _ => false
+            };
+        }
+
+        internal static bool IsDecimal(this Type clrType, out Type actualType)
+        {
+            actualType = clrType.IsGenericType && clrType.GetGenericTypeDefinition() == typeof(Nullable<>)
+                ? clrType.GetGenericArguments()[0]
+                : clrType;
+
+            return Type.GetTypeCode(actualType) switch
+            {
+                TypeCode.Decimal => true,
+                _ => false
+            };
+        }
+
+        internal static bool IsBoolean(this Type clrType, out Type actualType)
+        {
+            actualType = clrType.IsGenericType && clrType.GetGenericTypeDefinition() == typeof(Nullable<>)
+                ? clrType.GetGenericArguments()[0]
+                : clrType;
+
+            return Type.GetTypeCode(actualType) switch
+            {
+                TypeCode.Boolean => true,
+                _ => false
+            };
+        }
+
+        internal static bool IsDateTime(this Type clrType, out Type actualType)
+        {
+            actualType = clrType.IsGenericType && clrType.GetGenericTypeDefinition() == typeof(Nullable<>)
+                ? clrType.GetGenericArguments()[0]
+                : clrType;
+
+            return actualType == typeof(DateTime)
+                || actualType == typeof(DateTimeOffset);
+        }
+
+        internal static bool IsString(this Type clrType) => typeof(string).Equals(clrType);
+
+        internal static object Invoke(this
+            InstanceInvoker invoker,
+            object @this)
+            => invoker.Invoke(@this, Array.Empty<object>());
+
+        internal static T ValueOrThrow<T>(this IStructValue<T> ionType) where T : struct
+        {
+            if (ionType is null)
+                throw new ArgumentNullException(nameof(ionType));
+
+            return ionType.Value ?? throw new ArgumentNullException("ion type is null");
+        }
+
+        internal static T ValueOrThrow<T>(this IRefValue<T> ionType) where T : class
+        {
+            if (ionType is null)
+                throw new ArgumentNullException(nameof(ionType));
+
+            return ionType.Value ?? throw new ArgumentNullException("ion type is null");
+        }
 
         private static string ExtractFormatZeros(this string value, ushort maxSignificantDigits)
         {

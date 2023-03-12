@@ -5,7 +5,7 @@ using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
-    public readonly struct IonTimestamp : IIonValueType<DateTimeOffset?>
+    public readonly struct IonTimestamp : IStructValue<DateTimeOffset>
     {
         internal static readonly string Format = "yyyy-MM-ddTHH:mm:ss.ffffffzzz";
 
@@ -25,11 +25,17 @@ namespace Axis.Ion.Types
                 .ToArray();
         }
 
+        /// <summary>
+        /// Creates a null instance of the <see cref="IonTimestamp"/>
+        /// </summary>
+        /// <returns>The newly created null instance</returns>
+        public static IonTimestamp Null(params IIonType.Annotation[] annotations) => new IonTimestamp(null, annotations);
+
         #region IIonType
 
         public bool IsNull => Value == null;
 
-        public bool ValueEquals(IIonValueType<DateTimeOffset?> other) => Value == other?.Value == true;
+        public bool ValueEquals(IStructValue<DateTimeOffset> other) => Value == other?.Value == true;
 
         public string ToIonText() => Value?.ToString(Format) ?? "null.timestamp";
 
@@ -90,6 +96,8 @@ namespace Axis.Ion.Types
         }
 
         public static implicit operator IonTimestamp(DateTimeOffset? value) => new IonTimestamp(value);
+
+        public static implicit operator IonTimestamp(DateTime? value) => value.Map(v => new DateTimeOffset(v));
 
         #region Nested types
         public enum Precision

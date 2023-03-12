@@ -1,5 +1,5 @@
-﻿using Axis.Ion.IO.Binary;
-using Axis.Ion.IO.Binary.Payload;
+﻿using Axis.Ion.IO.Axion;
+using Axis.Ion.IO.Axion.Payload;
 using Axis.Ion.Types;
 using Axis.Ion.Utils;
 

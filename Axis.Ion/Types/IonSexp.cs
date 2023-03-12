@@ -40,13 +40,18 @@ namespace Axis.Ion.Types
             _elements = null;
         }
 
-        public IonList Default(params IIonType.Annotation[] annotations) => new IonList(annotations);
+        /// <summary>
+        /// Creates a null instance of the <see cref="IonSexp"/>
+        /// </summary>
+        /// <param name="annotations">any available annotation</param>
+        /// <returns>The newly created null instance</returns>
+        public static IonSexp Null(params IIonType.Annotation[] annotations) => new IonSexp(annotations);
 
         #region IIonValueType
 
         public bool IsNull => Value == null;
 
-        public bool ValueEquals(IIonValueType<IIonType[]?> other)
+        public bool ValueEquals(IRefValue<IIonType[]> other)
             => Value.NullOrTrue(other?.Value, Enumerable.SequenceEqual);
 
         public string ToIonText()

@@ -411,7 +411,7 @@ namespace Axis.Ion.Tests
                 IonTypes.Timestamp => DateTimeOffset.Now + TimeSpan.FromMilliseconds(SecureRandom.NextSignedInt()),
                 IonTypes.String => SecureRandom.NextValue(Words),
                 IonTypes.OperatorSymbol => RandomOperatorSymbols(),
-                IonTypes.QuotedSymbol => SecureRandom.NextValue(Words).WrapIn("'"),
+                IonTypes.QuotedSymbol => SecureRandom.NextValue(Words),
                 IonTypes.IdentifierSymbol => SecureRandom.NextValue(Words),
                 IonTypes.Blob => SecureRandom.NextBytes(SecureRandom.NextInt(1000)),
                 IonTypes.Clob => SecureRandom.NextValue(Words).ApplyTo(Encoding.ASCII.GetBytes),

@@ -45,6 +45,21 @@ namespace Axis.Ion.IO.Text
         /// <summary>
         /// TODO
         /// </summary>
+        public ListOptions Lists { get; } = new ListOptions();
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public ListOptions Sexps { get; } = new ListOptions();
+
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public StructOptions Structs { get; } = new StructOptions();
+
+        /// <summary>
+        /// TODO
+        /// </summary>
         public IndentationStyles IndentationStyle { get; set; }
 
 
@@ -133,6 +148,18 @@ namespace Axis.Ion.IO.Text
                     ? throw new ArgumentException("Line break cannot be 0")
                     : value;
             }
+        }
+
+        public class ListOptions
+        {
+            public bool UseMultipleLines { get; set; }
+        }
+
+        public class StructOptions
+        {
+            public bool UseMultipleLines { get; set; }
+
+            public bool UseQuotedIdentifierPropertyNames { get; set; }
         }
         #endregion
     }

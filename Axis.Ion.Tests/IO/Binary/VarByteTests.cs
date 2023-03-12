@@ -1,4 +1,4 @@
-﻿using Axis.Ion.IO.Binary;
+﻿using Axis.Ion.IO.Axion;
 using Axis.Luna.Extensions;
 using System.Collections;
 using System.Numerics;

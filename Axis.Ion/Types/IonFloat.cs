@@ -1,12 +1,11 @@
-﻿using Axis.Ion.Utils;
-using Axis.Luna.Extensions;
+﻿using Axis.Luna.Extensions;
 using System;
 using System.Linq;
 using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
-    public readonly struct IonFloat : IIonValueType<double?>
+    public readonly struct IonFloat : IStructValue<double>
     {
         private readonly IIonType.Annotation[] _annotations;
 
@@ -24,11 +23,18 @@ namespace Axis.Ion.Types
                 .ToArray();
         }
 
+        /// <summary>
+        /// Creates a null instance of the <see cref="IonFloat"/>
+        /// </summary>
+        /// <param name="annotations">any available annotation</param>
+        /// <returns>The newly created null instance</returns>
+        public static IonFloat Null(params IIonType.Annotation[] annotations) => new IonFloat(null, annotations);
+
         #region IIonType
 
         public bool IsNull => Value == null;
 
-        public bool ValueEquals(IIonValueType<double?> other) => Value.NullOrEquals(other.Value);
+        public bool ValueEquals(IStructValue<double> other) => Value.NullOrEquals(other.Value);
 
         public string ToIonText() => Value switch
         {

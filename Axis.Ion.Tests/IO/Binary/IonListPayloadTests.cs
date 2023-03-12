@@ -1,5 +1,5 @@
-﻿using Axis.Ion.IO.Binary;
-using Axis.Ion.IO.Binary.Payload;
+﻿using Axis.Ion.IO.Axion;
+using Axis.Ion.IO.Axion.Payload;
 using Axis.Ion.Types;
 using Axis.Ion.Utils;
 
@@ -44,7 +44,7 @@ namespace Axis.Ion.Tests.IO.Binary
             });
             ITypePayload.Write(memory, payload, options, new SymbolHashList());
             memoryArray = memory.ToArray();
-            Assert.AreEqual(46, memoryArray.Length);
+            Assert.AreEqual(47, memoryArray.Length);
             Assert.AreEqual(13, memoryArray[0]);
 
             // annotations

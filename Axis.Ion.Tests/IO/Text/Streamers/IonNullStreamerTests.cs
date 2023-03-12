@@ -12,19 +12,19 @@ namespace Axis.Ion.Tests.IO.Text.Streamers
         {
             var ionNull = new IonNull();
             var ionNullAnnotated = new IonNull("stuff", "other");
-            var ionNullStreamer = new IonNullStreamer();
+            var ionNullStreamer = new IonNullSerializer();
 
-            var text = ionNullStreamer.StreamText(ionNull, new StreamingContext(new SerializerOptions()));
-            var textAnnotated = ionNullStreamer.StreamText(ionNullAnnotated, new StreamingContext(new SerializerOptions()));
+            var text = ionNullStreamer.SerializeText(ionNull, new SerializingContext(new SerializerOptions()));
+            var textAnnotated = ionNullStreamer.SerializeText(ionNullAnnotated, new SerializingContext(new SerializerOptions()));
             Assert.AreEqual("null", text);
             Assert.AreEqual("stuff::other::null", textAnnotated);
 
 
-            var context = new StreamingContext(new SerializerOptions());
+            var context = new SerializingContext(new SerializerOptions());
             context.Options.Nulls.UseLongFormNulls = true;
 
-            text = ionNullStreamer.StreamText(ionNull, context);
-            textAnnotated = ionNullStreamer.StreamText(ionNullAnnotated, context);
+            text = ionNullStreamer.SerializeText(ionNull, context);
+            textAnnotated = ionNullStreamer.SerializeText(ionNullAnnotated, context);
             Assert.AreEqual("null.null", text);
             Assert.AreEqual("stuff::other::null.null", textAnnotated);
         }
@@ -34,14 +34,14 @@ namespace Axis.Ion.Tests.IO.Text.Streamers
         {
             var ionNull = new IonNull();
             var ionNullAnnotated = new IonNull("stuff", "other");
-            var ionNullStreamer = new IonNullStreamer();
-            var context = new StreamingContext(new SerializerOptions());
+            var ionNullStreamer = new IonNullSerializer();
+            var context = new SerializingContext(new SerializerOptions());
             context.Options.Nulls.UseLongFormNulls = true;
 
-            var text = ionNullStreamer.StreamText(ionNull, new StreamingContext(new SerializerOptions()));
-            var textAnnotated = ionNullStreamer.StreamText(ionNullAnnotated, new StreamingContext(new SerializerOptions()));
-            var longtext = ionNullStreamer.StreamText(ionNull, context);
-            var longtextAnnotated = ionNullStreamer.StreamText(ionNullAnnotated, context);
+            var text = ionNullStreamer.SerializeText(ionNull, new SerializingContext(new SerializerOptions()));
+            var textAnnotated = ionNullStreamer.SerializeText(ionNullAnnotated, new SerializingContext(new SerializerOptions()));
+            var longtext = ionNullStreamer.SerializeText(ionNull, context);
+            var longtextAnnotated = ionNullStreamer.SerializeText(ionNullAnnotated, context);
 
             var textResult = ionNullStreamer.ParseString(text);
             var textAnnotatedResult = ionNullStreamer.ParseString(textAnnotated);

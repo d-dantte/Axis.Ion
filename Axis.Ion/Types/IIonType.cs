@@ -1,9 +1,13 @@
 ﻿using Axis.Luna.Extensions;
+using Axis.Luna.Common;
 using System;
-using System.Collections.Generic;
+using System.Linq;
 
 namespace Axis.Ion.Types
 {
+    /// <summary>
+    /// The finite set of ion types
+    /// </summary>
     public enum IonTypes
     {
         Null = 1,
@@ -23,6 +27,9 @@ namespace Axis.Ion.Types
         Struct
     }
 
+    /// <summary>
+    /// The base for all ion values
+    /// </summary>
     public interface IIonType
     {
         #region NullOf
@@ -38,21 +45,21 @@ namespace Axis.Ion.Types
         {
             return type switch
             {
-                IonTypes.Null => new IonNull(annotations),
-                IonTypes.Bool => new IonBool(null, annotations),
-                IonTypes.Int => new IonInt(null, annotations),
-                IonTypes.Decimal => new IonDecimal(null, annotations),
-                IonTypes.Float => new IonFloat(null, annotations),
-                IonTypes.Timestamp => new IonTimestamp(null, annotations),
-                IonTypes.String => new IonString(null, annotations),
-                IonTypes.OperatorSymbol => new IonOperator(null, annotations),
-                IonTypes.IdentifierSymbol => new IonIdentifier(null, annotations),
-                IonTypes.QuotedSymbol => new IonQuotedSymbol(null, annotations),
-                IonTypes.Blob => new IonBlob(null, annotations),
-                IonTypes.Clob => new IonClob(null, annotations),
-                IonTypes.List => new IonList(annotations),
-                IonTypes.Sexp => new IonSexp(annotations),
-                IonTypes.Struct => new IonStruct(annotations),
+                IonTypes.Null => IonNull.Null(annotations),
+                IonTypes.Bool => IonBool.Null(annotations),
+                IonTypes.Int => IonInt.Null(annotations),
+                IonTypes.Decimal => IonDecimal.Null(annotations),
+                IonTypes.Float => IonFloat.Null(annotations),
+                IonTypes.Timestamp => IonTimestamp.Null(annotations),
+                IonTypes.String => IonString.Null(annotations),
+                IonTypes.OperatorSymbol => IonOperator.Null(),
+                IonTypes.IdentifierSymbol => IonIdentifier.Null(),
+                IonTypes.QuotedSymbol => IonQuotedSymbol.Null(),
+                IonTypes.Blob => IonBlob.Null(annotations),
+                IonTypes.Clob => IonClob.Null(annotations),
+                IonTypes.List => IonList.Null(annotations),
+                IonTypes.Sexp => IonSexp.Null(annotations),
+                IonTypes.Struct => IonStruct.Null(annotations),
                 _ => throw new ArgumentException($"Invalid {typeof(IonTypes)} value: {type}")
             };
         }
@@ -143,54 +150,42 @@ namespace Axis.Ion.Types
             public static implicit operator Annotation(IonQuotedSymbol symbol) => new Annotation(symbol);
 
             #region Parse
-            public static bool TryParse(string @string, out Annotation annotation)
-            {
-                annotation = default;
-                var normalized = @string?.TrimEnd("::") ?? "";
-                if (IIonTextSymbol.TryParse(normalized, out var symbol))
-                {
-                    if (symbol == null)
-                        return false;
-
-                    annotation = new Annotation(symbol.ToIonText());
-                    return true;
-                }
-                return false;
-            }
 
             public static Annotation Parse(string @string)
             {
-                if (TryParse(@string, out Annotation annotation))
-                    return annotation;
-
-                throw new FormatException($"Invalid format: {@string}");
-            }
-
-            public static bool TryParseCollection(string @string, out Annotation[]? annotations)
-            {
-                annotations = null;
-                if (string.IsNullOrWhiteSpace(@string))
-                    return false;
-
-                var annotationList = new List<Annotation>();
-                foreach(var part in @string.Split("::", StringSplitOptions.RemoveEmptyEntries))
-                {
-                    if (TryParse(part, out Annotation annotation))
-                        annotationList.Add(annotation);
-
-                    else return false;
-                }
-
-                annotations = annotationList.ToArray();
-                return true;
+                _ = TryParse(@string, out var annotation);
+                return annotation.Resolve();
             }
 
             public static Annotation[] ParseCollection(string @string)
             {
-                if (TryParseCollection(@string, out Annotation[]? annotations))
-                    return annotations ?? throw new Exception("Unknown");
+                _ = TryParseCollection(@string, out var result);
+                return result.Resolve();
+            }
 
-                throw new FormatException($"Invalid format: {@string}");
+            public static bool TryParse(string @string, out IResult<Annotation> annotationResult)
+            {
+                var normalized = @string?.TrimEnd("::") ?? "";
+                _ = IIonTextSymbol.TryParse(normalized, out var result);
+                annotationResult = result.Map(symbol => new Annotation(symbol.ToIonText()));
+
+                return annotationResult is IResult<Annotation>.DataResult;
+            }
+
+            public static bool TryParseCollection(string @string, out IResult<Annotation[]> annotationsResult)
+            {
+                annotationsResult = @string?
+                    .Split("::", StringSplitOptions.RemoveEmptyEntries)
+                    .Select(part =>
+                    {
+                        _ = TryParse(part, out var result);
+                        return result;
+                    })
+                    .Fold()
+                    .Map(annotations => annotations.ToArray())
+                    ?? Result.Of<Annotation[]>(new ArgumentNullException(nameof(@string)));
+
+                return annotationsResult is IResult<Annotation[]>.DataResult;
             }
             #endregion
         }
@@ -198,14 +193,51 @@ namespace Axis.Ion.Types
         #endregion
     }
 
-    public interface IIonValueType<TValue>: IIonType
+    /// <summary>
+    /// Represents an <see cref="IIonType"/> that encapsulates a clr value-type
+    /// </summary>
+    /// <typeparam name="TValue">the encapsulated value</typeparam>
+    public interface IStructValue<TValue>: IIonType
+    where TValue: struct
     {
-        TValue Value { get; }
+        /// <summary>
+        /// The encapsulated value
+        /// </summary>
+        TValue? Value { get; }
 
-        bool ValueEquals(IIonValueType<TValue> other);
+        /// <summary>
+        /// Value equality test.
+        /// </summary>
+        /// <param name="other">The other <see cref="IStructValue{TValue}"/> to test for equality</param>
+        /// <returns>True if the given <see cref="IStructValue{TValue}"/> encapsulates a value equal to the current instance's value, false otherwise</returns>
+        bool ValueEquals(IStructValue<TValue> other);
     }
 
-    public interface IIonConainer<TValue>: IIonValueType<TValue[]?>
+    /// <summary>
+    /// Represents an <see cref="IIonType"/> that encapsulates a clr ref-type
+    /// </summary>
+    /// <typeparam name="TValue">the encapsulated value</typeparam>
+    public interface IRefValue<TValue>: IIonType
+    where TValue: class
+    {
+        /// <summary>
+        /// The encapsulated value
+        /// </summary>
+        TValue? Value { get; }
+
+        /// <summary>
+        /// Value equality test.
+        /// </summary>
+        /// <param name="other">The other <see cref="IRefValue{TValue}{TValue}"/> to test for equality</param>
+        /// <returns>True if the given <see cref="IRefValue{TValue}"/> encapsulates a value equal to the current instance's value, false otherwise</returns>
+        bool ValueEquals(IRefValue<TValue> other);
+    }
+
+    /// <summary>
+    /// Represents an <see cref="IStructValue{TValue}"/> whose value is a collection (array)
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    public interface IIonConainer<TValue>: IRefValue<TValue[]>
     {
     }
 }

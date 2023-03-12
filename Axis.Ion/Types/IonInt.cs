@@ -10,7 +10,7 @@ namespace Axis.Ion.Types
     /// Ion Int.
     /// Note that all encapsulated values are assumed to be signed - including single byte values.
     /// </summary>
-    public readonly struct IonInt : IIonValueType<BigInteger?>
+    public readonly struct IonInt : IStructValue<BigInteger>
     {
         private readonly IIonType.Annotation[] _annotations;
 
@@ -28,11 +28,18 @@ namespace Axis.Ion.Types
                 .ToArray();
         }
 
+        /// <summary>
+        /// Creates a null instance of the <see cref="IonInt"/>
+        /// </summary>
+        /// <param name="annotations">any available annotation</param>
+        /// <returns>The newly created null instance</returns>
+        public static IonInt Null(params IIonType.Annotation[] annotations) => new IonInt(null, annotations);
+
         #region IIonType
 
         public bool IsNull => Value == null;
 
-        public bool ValueEquals(IIonValueType<BigInteger?> other) => Value == other?.Value == true;
+        public bool ValueEquals(IStructValue<BigInteger> other) => Value == other?.Value == true;
 
         public string ToIonText() => Value?.ToString() ?? "null.int";
 

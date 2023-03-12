@@ -9,7 +9,7 @@ namespace Axis.Ion.Types
     /// Represents a readonly array of bytes. The array returned by <see cref="IonBlob.Value"/> is always a copy of the internal
     /// array, that way, array elements cannot be reassigned.
     /// </summary>
-    public readonly struct IonBlob : IIonValueType<byte[]?>
+    public readonly struct IonBlob : IRefValue<byte[]>
     {
         private readonly IIonType.Annotation[] _annotations;
         private readonly byte[]? _blob;
@@ -28,11 +28,18 @@ namespace Axis.Ion.Types
                 .ToArray();
         }
 
+        /// <summary>
+        /// Creates a null instance of the <see cref="IonBlob"/>
+        /// </summary>
+        /// <param name="annotations">any available annotation</param>
+        /// <returns>The newly created null instance</returns>
+        public static IonBlob Null(params IIonType.Annotation[] annotations) => new IonBlob(null, annotations);
+
         #region IIonType
 
         public bool IsNull => Value == null;
 
-        public bool ValueEquals(IIonValueType<byte[]?> other)
+        public bool ValueEquals(IRefValue<byte[]> other)
             => other.Value.NullOrTrue(Value, Enumerable.SequenceEqual);
 
         public string ToIonText()

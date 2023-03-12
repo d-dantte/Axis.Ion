@@ -11,16 +11,19 @@ namespace Axis.Ion.Types
     public readonly struct IonStruct: IIonConainer<IonStruct.Property>
     {
         private readonly IIonType.Annotation[]? _annotations;
-        private readonly Dictionary<string, IIonType>? _properties;
+        private readonly Dictionary<IIonTextSymbol, IIonType>? _properties;
 
         /// <summary>
         /// A list of the properties contained by this struct, in ascending order of name
         /// </summary>
         public Property[]? Value => _properties?
             .Select(kvp => new Property(kvp.Key, kvp.Value))
-            .OrderBy(prop => prop.Name)
+            .OrderBy(prop => prop.Name?.ToIonText() ?? throw new ArgumentException($"Invalid property: {prop}"))
             .ToArray();
 
+        /// <summary>
+        /// The property map
+        /// </summary>
         public PropertyMap Properties => new PropertyMap(_properties);
 
         public IonTypes Type => IonTypes.Struct;
@@ -31,7 +34,7 @@ namespace Axis.Ion.Types
         {
             _annotations = initializer?.Annotations.ToArray();
             _properties = initializer != null
-                ? new Dictionary<string, IIonType>(initializer.PropertyMap)
+                ? new Dictionary<IIonTextSymbol, IIonType>(initializer.PropertyMap)
                 : null;
         }
 
@@ -43,13 +46,25 @@ namespace Axis.Ion.Types
             _properties = null;
         }
 
-        public IonStruct Default(params IIonType.Annotation[] annotations) => new IonStruct(annotations);
+        /// <summary>
+        /// Creates a null instance of the <see cref="IonList"/>
+        /// </summary>
+        /// <param name="annotations">any available annotation</param>
+        /// <returns>The newly created null instance</returns>
+        public static IonStruct Null(params IIonType.Annotation[] annotations) => new IonStruct(annotations);
+
+        /// <summary>
+        /// Creates and returns an empty <see cref="IonList"/> instance.
+        /// </summary>
+        /// <param name="annotations">any available annotation</param>
+        /// <returns>The newly created empty instance</returns>
+        public static IonStruct Empty(params IIonType.Annotation[] annotations) => new Initializer(annotations);
 
         #region IIonValueType
 
         public bool IsNull => Value == null;
 
-        public bool ValueEquals(IIonValueType<IonStruct.Property[]?> other)
+        public bool ValueEquals(IRefValue<Property[]> other)
         {
             if (other == null)
                 return false;
@@ -63,10 +78,15 @@ namespace Axis.Ion.Types
             if (thisProperties?.Count == otherProperties?.Length)
             {
                 return otherProperties
-                    .OrderBy(p => p.Name)
-                    .All(p =>
-                        thisProperties?.TryGetValue(p.Name, out var value) == true
-                        && value.NullOrEquals(p.Value) == true);
+                    .Select(prop => (
+                        Value: prop.Value,
+                        Name: prop.Name ?? throw new InvalidOperationException("Property name cannot be null")))
+                    .OrderBy(ptuple => ptuple.Name.ToIonText())
+                    .All(ptuple =>
+                    {
+                        return thisProperties?.TryGetValue(ptuple.Name, out var value) == true
+                        && value.NullOrEquals(ptuple.Value) == true;
+                    });
             }
 
             return false;
@@ -121,24 +141,38 @@ namespace Axis.Ion.Types
         /// </summary>
         public readonly struct Property
         {
-            private readonly string? _propertyName;
+            private readonly IIonTextSymbol _propertyName;
 
             /// <summary>
             /// The property's name. Note that this can either be a proper string, or similar to <see cref="IIonSymbol.Identifier"/>
+            /// <para>
+            /// NOTE: consider making this non-nullable
+            /// </para>
             /// </summary>
-            public string Name => _propertyName?.ToString() ?? "";
+            public IIonTextSymbol? Name => _propertyName;
+
+            /// <summary>
+            /// The name of the property in string-text form
+            /// <para>
+            /// NOTE: consider making this non-nullable
+            /// </para>
+            /// </summary>
+            public string? NameText => Name?.ToIonText();
 
             /// <summary>
             /// The property's value. This is never null, unless when the <see cref="Property"/> is a default values
             /// </summary>
             public IIonType Value { get; }
 
-            internal Property(string name, IIonType value)
+            public Property(string name, IIonType value)
+            : this(IIonTextSymbol.Parse(name), value)
+            {
+            }
+
+            public Property(IIonTextSymbol name, IIonType value)
             {
                 Value = value ?? throw new ArgumentNullException(nameof(value));
-                _propertyName = !IIonTextSymbol.TryParse(name, out var symbol)
-                    ? throw new ArgumentException($"Invalid property name: {name}")
-                    : symbol?.ToIonText();
+                _propertyName = name ?? throw new ArgumentNullException(nameof(name));
             }
 
             public override int GetHashCode() => HashCode.Combine(_propertyName, Value);
@@ -163,93 +197,115 @@ namespace Axis.Ion.Types
         }
 
         /// <summary>
-        /// 
+        /// Instances of this class are wrapped around the values of a struct and enable convenient key-value indexing
+        /// of the structs properties
         /// </summary>
-        public struct PropertyMap : IIndexer<string, IIonType>
+        public struct PropertyMap : IIndexer<IIonTextSymbol, IIonType>
         {
-            private readonly Dictionary<string, IIonType> _properties;
+            private readonly Dictionary<IIonTextSymbol, IIonType> _properties;
 
             /// <summary>
-            /// 
+            /// Names of all properties in no particular order
             /// </summary>
-            public IEnumerable<string> Names => _properties.Keys;
+            public IEnumerable<IIonTextSymbol> Names => _properties.Keys;
 
             /// <summary>
-            /// 
+            /// Values of all properties in no particular order
             /// </summary>
             public IEnumerable<IIonType> Values => _properties.Values;
 
             /// <summary>
-            /// 
+            /// Number of properties in the map
             /// </summary>
             public int Count => _properties.Count;
 
             /// <summary>
-            /// 
+            /// Gets the value mapped to the given property name
             /// </summary>
-            /// <param name="propertyName"></param>
-            /// <returns></returns>
+            /// <param name="propertyName">The property name</param>
+            /// <returns>The mapped value</returns>
+            public IIonType this[IIonTextSymbol propertyName]
+            {
+                get => _properties[propertyName ?? throw new ArgumentNullException(nameof(propertyName))];
+                set => _properties[propertyName ?? throw new ArgumentNullException(nameof(propertyName))]
+                    = value.ThrowIfNull(new ArgumentNullException(nameof(value)));
+            }
+
+            /// <summary>
+            /// Gets the value mapped to the given property name
+            /// </summary>
+            /// <param name="propertyName">The property name</param>
+            /// <returns>The mapped value</returns>
             public IIonType this[string propertyName]
             {
-                get => _properties[propertyName];
-                set => _properties[propertyName.ValidatePropertyName()] = value.ThrowIfNull(new ArgumentNullException(nameof(value)));
+                get => this[IIonTextSymbol.Parse(propertyName)];
+                set => this[IIonTextSymbol.Parse(propertyName)] = value;
             }
 
 
-            internal PropertyMap(Dictionary<string, IIonType>? properties)
+            internal PropertyMap(Dictionary<IIonTextSymbol, IIonType>? properties)
             {
                 _properties = properties ?? throw new ArgumentNullException(nameof(properties));
             }
 
             /// <summary>
-            /// 
+            /// Indicates if this map contains a property with the given name
             /// </summary>
-            /// <param name="propertyName"></param>
-            /// <returns></returns>
-            public bool Contains(string propertyName) => _properties.ContainsKey(propertyName);
+            /// <param name="propertyName">The property name to check for</param>
+            /// <returns>True if the property exists, false otherwise</returns>
+            public bool Contains(IIonTextSymbol propertyName) => _properties.ContainsKey(propertyName);
 
             /// <summary>
-            /// 
+            /// Indicates if this map contains a property with the given name
             /// </summary>
-            /// <param name="propertyName"></param>
-            /// <param name="value"></param>
+            /// <param name="propertyName">The property name to check for</param>
+            /// <returns>True if the property exists, false otherwise</returns>
+            public bool Contains(string propertyName) => _properties.ContainsKey(IIonTextSymbol.Parse(propertyName));
+
+            /// <summary>
+            /// Adds a new property to the map if one doesn't exist
+            /// </summary>
+            /// <param name="propertyName">The property name</param>
+            /// <param name="value">The property value</param>
             /// <returns></returns>
-            public bool Add(string propertyName, IIonType value)
+            public bool Add(IIonTextSymbol propertyName, IIonType value)
                 => _properties.TryAdd(
-                    propertyName.ValidatePropertyName(),
+                    propertyName,
                     value.ThrowIfNull(new ArgumentNullException(nameof(value))));
 
             /// <summary>
-            /// 
+            /// Removes the property with the given name if it exists, and returns it's value
             /// </summary>
-            /// <param name="propertyName"></param>
-            /// <param name="value"></param>
-            /// <returns></returns>
-            public bool Remove(string propertyName, out IIonType? value)
+            /// <param name="propertyName">The name of the property</param>
+            /// <param name="value">the returned value if the property exists</param>
+            /// <returns>True if the property existed and was removed, false otherwise</returns>
+            public bool Remove(IIonTextSymbol propertyName, out IIonType? value)
                 => _properties.Remove(propertyName, out value);
         }
 
         /// <summary>
-        /// 
+        /// The Initializer for structs
         /// </summary>
         public class Initializer : IWriteonlyIndexer<string, IonValueWrapper>
         {
             internal IIonType.Annotation[] Annotations;
-            internal Dictionary<string, IIonType> PropertyMap;
+            internal Dictionary<IIonTextSymbol, IIonType> PropertyMap;
 
             public int Count => PropertyMap.Count;
 
             public Property[] Properties => PropertyMap
                 .Select(kvp => new Property(kvp.Key, kvp.Value))
-                .OrderBy(prop => prop.Name)
+                .OrderBy(prop => prop.Name?.ToIonText() ?? throw new ArgumentNullException("Invalid property name: null"))
                 .ToArray();
 
             public Initializer(IIonType.Annotation[] annotations, params Property[] values)
             {
                 Annotations = annotations ?? throw new ArgumentNullException(nameof(annotations));
                 PropertyMap = values?
-                    .ToDictionary(p => p.Name, p => p.Value)
-                    ?? new Dictionary<string, IIonType>();
+                    .ToDictionary(
+                        p => p.Name ?? throw new ArgumentNullException("Invalid property name: null"),
+                        p => p.Value)
+                    ?? new Dictionary<IIonTextSymbol, IIonType>();
             }
 
             public Initializer(string annotations, params Property[] values)
@@ -265,14 +321,25 @@ namespace Axis.Ion.Types
             { }
 
             /// <summary>
-            /// 
+            /// Gets the <see cref="IonValueWrapper"/> for the given key symbol
             /// </summary>
-            /// <param name="key"></param>
-            /// <returns></returns>
-            public IonValueWrapper this[string key] 
+            /// <param name="key">the key</param>
+            /// <returns>the value mapped to the key</returns>
+            public IonValueWrapper this[IIonTextSymbol key]
             {
-                set => PropertyMap[key.ValidatePropertyName()] = value.Value.ThrowIfNull(
+                set => PropertyMap[key] = value.Value.ThrowIfNull(
                     new ArgumentException($"Invalid {nameof(IonValueWrapper)} value"));
+            }
+
+
+            /// <summary>
+            /// Gets the <see cref="IonValueWrapper"/> for the given key string
+            /// </summary>
+            /// <param name="key">the key</param>
+            /// <returns>the value mapped to the key</returns>
+            public IonValueWrapper this[string key]
+            {
+                set => this[IIonTextSymbol.Parse(key)] = value;
             }
         }
         #endregion

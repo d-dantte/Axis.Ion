@@ -11,7 +11,7 @@ namespace Axis.Ion.Tests.IO.Text.Streamers
         public void StreamText_ReturnsStringRepresentation()
         {
             var annotation = IIonType.Annotation.Parse("plain_annotation");
-            var annotationText = IonAnnotationStreamer.StreamText(annotation);
+            var annotationText = IonAnnotationSerializer.StreamText(annotation);
 
             Assert.AreEqual($"{annotation.Value}::", annotationText);
         }
@@ -21,7 +21,7 @@ namespace Axis.Ion.Tests.IO.Text.Streamers
         {
             var annotation = IIonType.Annotation.Parse("plain_annotation");
             var annotation2 = IIonType.Annotation.Parse("'another'");
-            var annotationsText = IonAnnotationStreamer.StreamText(new[] { annotation, annotation2 });
+            var annotationsText = IonAnnotationSerializer.StreamText(new[] { annotation, annotation2 });
 
             Assert.AreEqual($"{annotation.Value}::{annotation2.Value}::", annotationsText);
         }
@@ -30,14 +30,14 @@ namespace Axis.Ion.Tests.IO.Text.Streamers
         public void ParseString_WithValidTokenString_ReturnsAnnotationArray()
         {
             var annotationText = "$the_identifier::";
-            var annotation = IonAnnotationStreamer.ParseString(annotationText);
+            var annotation = IonAnnotationSerializer.ParseString(annotationText);
 
             Assert.IsNotNull(annotation);
             Assert.AreEqual(1, annotation.Length);
             Assert.IsTrue(annotationText.StartsWith(annotation[0].Value));
 
             annotationText = "$the_identifier::'and others'::";
-            annotation = IonAnnotationStreamer.ParseString(annotationText);
+            annotation = IonAnnotationSerializer.ParseString(annotationText);
 
             Assert.IsNotNull(annotation);
             Assert.AreEqual(2, annotation.Length);
