@@ -3,6 +3,7 @@ using Axis.Ion.Utils;
 using Axis.Luna.Extensions;
 using Axis.Luna.FInvoke;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -15,6 +16,26 @@ namespace Axis.Ion
     /// </summary>
     internal static class Extensions
     {
+        #region External Helpers
+
+        public static bool IsIonPrimitive(this IonTypes ionType)
+        {
+            return ionType switch
+            {
+                IonTypes.Bool
+                or IonTypes.Int
+                or IonTypes.Float
+                or IonTypes.Decimal
+                or IonTypes.Timestamp
+                or IonTypes.String => true,
+
+                _ => false
+            };
+        }
+
+        #endregion
+
+        #region Internal Helpers
         internal static object? IonValue(this IIonType ion)
         {
             if (ion is null)
@@ -56,18 +77,24 @@ namespace Axis.Ion
             else return exception.Throw<T>();
         }
 
-        internal static T? FirstOrNull<T>(this IEnumerable<T> enumerable)
-        where T : struct
+        public static TValue? FirstOrNull<TValue>(this
+            IEnumerable<TValue> enumerable,
+            Func<TValue, bool>? predicate = null)
+            where TValue : struct
         {
             if (enumerable is null)
                 throw new ArgumentNullException(nameof(enumerable));
 
-            using var enumerator = enumerable.GetEnumerator();
+            if (predicate == null)
+                predicate = v => true;
+
+            var predicated = enumerable.Where(predicate);
+            using var enumerator = predicated.GetEnumerator();
 
             if (enumerator.MoveNext())
                 return enumerator.Current;
 
-            else return new T?();
+            return null;
         }
 
         internal static string Reverse(this string value)
@@ -318,6 +345,57 @@ namespace Axis.Ion
 
         internal static bool IsString(this Type clrType) => typeof(string).Equals(clrType);
 
+        internal static bool IsOrImplementsGenericInterface(this Type targetType, Type genericDefinitionInterface)
+        {
+            if (targetType is null)
+                throw new ArgumentNullException(nameof(targetType));
+
+            if (genericDefinitionInterface is null)
+                throw new ArgumentNullException(nameof(genericDefinitionInterface));
+
+            if (!genericDefinitionInterface.IsInterface)
+                throw new ArgumentException($"Interface '{genericDefinitionInterface}' must be an interface");
+
+            if (!genericDefinitionInterface.IsGenericTypeDefinition)
+                throw new ArgumentException($"Interfce '{genericDefinitionInterface}' must be a generic type definition");
+
+            if (targetType.HasGenericInterfaceDefinition(genericDefinitionInterface))
+                return true;
+
+            else return targetType.ImplementsGenericInterface(genericDefinitionInterface);
+        }
+
+        internal static bool IsOrExtendsGenericBase(this Type targetType, Type genericDefinitionBase)
+        {
+            if (targetType is null)
+                throw new ArgumentNullException(nameof(targetType));
+
+            if (genericDefinitionBase is null)
+                throw new ArgumentNullException(nameof(genericDefinitionBase));
+
+            if (genericDefinitionBase.IsInterface)
+                throw new ArgumentException($"base type '{genericDefinitionBase}' must not be an interface");
+
+            return targetType
+                .TypeLineage()
+                .Where(type => type.IsGenericType)
+                .Select(type => type.GetGenericTypeDefinition())
+                .Any(definition => definition.Equals(genericDefinitionBase));
+        }
+
+        internal static bool IsIonPrimitive(this Type type)
+        {
+            if (type is null)
+                throw new ArgumentNullException(nameof(type));
+
+            return type.IsIntegral(out _)
+                || type.IsReal(out _)
+                || type.IsDecimal(out _)
+                || type.IsDateTime(out _)
+                || type.IsBoolean(out _)
+                || type.IsString();
+        }
+
         internal static object Invoke(this
             InstanceInvoker invoker,
             object @this)
@@ -338,6 +416,28 @@ namespace Axis.Ion
 
             return ionType.Value ?? throw new ArgumentNullException("ion type is null");
         }
+
+        internal static IDictionary<TKey, TValue> Cast<TKey, TValue>(this IDictionary dictionary)
+        where TKey: notnull
+        {
+            if (typeof(IDictionary<TKey, TValue>).IsAssignableFrom(dictionary.GetType()))
+                return (IDictionary<TKey, TValue>)dictionary;
+
+            var newDictionary = new Dictionary<TKey, TValue>();
+            foreach (var item in dictionary)
+            {
+                var entry = (DictionaryEntry)(item ?? throw new InvalidOperationException("Item cannot be null"));
+
+                if (entry.Value is null)
+                    newDictionary[(TKey)entry.Key] = default;
+
+                else newDictionary[(TKey)entry.Key] = (TValue)entry.Value;
+            }
+
+            return newDictionary;
+        }
+
+        #endregion
 
         private static string ExtractFormatZeros(this string value, ushort maxSignificantDigits)
         {

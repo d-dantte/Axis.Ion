@@ -1,4 +1,4 @@
-﻿using Axis.Ion.Conversion.IonProfiles;
+﻿using Axis.Ion.Conversion.Converters;
 using Axis.Ion.Types;
 using Axis.Luna.Extensions;
 using Axis.Luna.FInvoke;
@@ -49,7 +49,7 @@ namespace Axis.Ion.Conversion.ClrReflection
                         return null;
 
                     return ionProperties
-                        .Where(ionProp => IConversionProfile.AreCompatible(ionProp.Value.Type, param.ParameterType))
+                        .Where(ionProp => ConversionUtils.AreCompatible(ionProp.Value.Type, param.ParameterType))
                         .FirstOrNull();
                 })
                 .Where(prop => prop is not null)

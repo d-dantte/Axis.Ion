@@ -33,7 +33,6 @@ namespace Axis.Ion.Types
     public interface IIonType
     {
         #region NullOf
-
         /// <summary>
         /// Creates null values for the given <see cref="IonTypes"/>, and annotations
         /// </summary>

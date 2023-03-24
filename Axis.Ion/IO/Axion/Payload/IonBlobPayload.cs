@@ -50,7 +50,7 @@ namespace Axis.Ion.IO.Axion.Payload
 
             // null?
             if (metadata.IsNull)
-                return new IonBlobPayload((IonBlob)IIonType.NullOf(IonTypes.Blob, annotations));
+                return new IonBlobPayload(IonBlob.Null(annotations));
 
             // non-null?
             else
@@ -58,10 +58,7 @@ namespace Axis.Ion.IO.Axion.Payload
                 var charCount = stream.ReadVarByteInteger();
                 return !stream.TryReadExactBytes((int)charCount, out var bytes)
                     ? throw new EndOfStreamException()
-                    : new IonBlobPayload(
-                        new IonBlob(
-                            bytes,
-                            annotations));
+                    : new IonBlobPayload(new IonBlob(bytes, annotations));
             }
         }
         #endregion

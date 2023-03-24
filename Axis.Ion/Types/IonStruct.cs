@@ -273,6 +273,8 @@ namespace Axis.Ion.Types
                     propertyName,
                     value.ThrowIfNull(new ArgumentNullException(nameof(value))));
 
+            public bool Add(string propertyName, IIonType value) => Add(IIonTextSymbol.Parse(propertyName), value);
+
             /// <summary>
             /// Removes the property with the given name if it exists, and returns it's value
             /// </summary>
@@ -281,6 +283,14 @@ namespace Axis.Ion.Types
             /// <returns>True if the property existed and was removed, false otherwise</returns>
             public bool Remove(IIonTextSymbol propertyName, out IIonType? value)
                 => _properties.Remove(propertyName, out value);
+
+            public bool Remove(string propertyName, out IIonType? value) => Remove(IIonTextSymbol.Parse(propertyName), out value);
+
+            public bool TryGetvalue(IIonTextSymbol propertyName, out IIonType? value)
+                => _properties.TryGetValue(propertyName, out value);
+
+            public bool TryGetvalue(string propertyName, out IIonType? value)
+                => TryGetvalue(IIonTextSymbol.Parse(propertyName), out value);
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-﻿using Axis.Ion.Conversion.IonProfiles;
+﻿using Axis.Ion.Conversion.Converters;
 using Axis.Ion.Types;
 using System;
 using System.Collections.Concurrent;
@@ -9,14 +9,14 @@ namespace Axis.Ion.Conversion
 {
     public static class Ionizer
     {
-        private static readonly ConcurrentDictionary<Type, IConversionProfile> ObjectConverters = new ConcurrentDictionary<Type, IConversionProfile>();
-        internal static readonly List<IConversionProfile> SingletonDefaultTypeConverters = new List<IConversionProfile>
+        private static readonly ConcurrentDictionary<Type, ObjectConverter> ObjectConverters = new ConcurrentDictionary<Type, ObjectConverter>();
+        internal static readonly List<IConverter> SingletonDefaultTypeConverters = new List<IConverter>
         {
-            new EnumConversionProfile(), // enum come before primitive because some enum types will pass the IsIntegral(...) test
-            new PrimitiveConversionProfile(),
-            new MapConversionProfile(),
-            //new ComplexMapProfile(),
-            new CollectionConversionProfile(),
+            new EnumConverter(), // enum come before primitive because some enum types will pass the IsIntegral(...) test
+            new PrimitiveConverter(),
+            new MapConverter(),
+            new ComplexMapConverter(),
+            new CollectionConverter(),
             //new ComplexCollectionProfile()
         };
 
@@ -28,12 +28,12 @@ namespace Axis.Ion.Conversion
             return ToIon(typeof(T), value, options);
         }
 
-        public static T? FromIon<T>(IIonType ion, ConversionOptions? options = null)
+        public static T? ToClr<T>(IIonType ion, ConversionOptions? options = null)
         {
             if (ion is null)
                 throw new ArgumentNullException(nameof(ion));
 
-            var obj = FromIon(typeof(T), ion, options);
+            var obj = ToClr(typeof(T), ion, options);
 
             if (obj is null)
                 return default;
@@ -43,25 +43,34 @@ namespace Axis.Ion.Conversion
 
         public static IIonType ToIon(Type sourceType, object? value, ConversionOptions? options = null)
         {
-            IConversionProfile.ValidateSourceTypeCompatibility(sourceType, value?.GetType());
-
-            options ??= new ConversionOptions();
-            var converters = options.Converters
-                .Concat(SingletonDefaultTypeConverters)
-                .Concat(
-                    ObjectConverters.TryGetValue(sourceType, out var profile)
-                    ? new[] { profile }
-                    : Enumerable.Empty<IConverter>());
-
-            var converter = converters
-                .Where(profile => profile.CanConvert(sourceType))
-                .FirstOrDefault()
-                ?? (ObjectConverters[sourceType] = new ObjectConversionProfile(sourceType));
-
-            return converter.ToIon(sourceType, value, options);
+            return ToIon(sourceType, value, new ConversionContext(options ?? new ConversionOptions()));
         }
 
-        public static object? FromIon(Type destinationType, IIonType ion, ConversionOptions? options = null)
+        public static object? ToClr(Type destinationType, IIonType ion, ConversionOptions? options = null)
+        {
+            return ToClr(destinationType, ion, new ConversionContext(options ?? new ConversionOptions()));
+        }
+
+        internal static IIonType ToIon(Type sourceType, object? instance, ConversionContext context)
+        {
+            sourceType.ValidateCongruenceWith(instance?.GetType());
+
+            var converter = context.Options.IonConverters
+                .Concat(SingletonDefaultTypeConverters)
+                .Where(profile => profile.CanConvert(sourceType, instance))
+                .FirstOrDefault();
+
+            if (converter is null)
+            {
+                converter = TypeCategory.Object == ConversionUtils.CategoryOf(sourceType)
+                    ? GetObjectConverterFor(sourceType)
+                    : throw new InvalidOperationException($"Could not find a converter for type: {sourceType}");
+            }
+
+            return converter.ToIon(sourceType, instance, context.Next());
+        }
+
+        internal static object? ToClr(Type destinationType, IIonType ion, ConversionContext context)
         {
             if (destinationType is null)
                 throw new ArgumentNullException(nameof(destinationType));
@@ -72,20 +81,23 @@ namespace Axis.Ion.Conversion
             if (ion is IonNull)
                 return null;
 
-            options ??= new ConversionOptions();
-            var converters = options.Converters
+            var converter = context.Options.ClrConverters
                 .Concat(SingletonDefaultTypeConverters)
-                .Concat(
-                    ObjectConverters.TryGetValue(destinationType, out var profile)
-                    ? new[] { profile }
-                    : Enumerable.Empty<IConverter>());
+                .Where(profile => profile.CanConvert(destinationType, ion))
+                .FirstOrDefault();
 
-            var converter = converters
-                .Where(profile => profile.CanConvert(destinationType))
-                .FirstOrDefault()
-                ?? (ObjectConverters[destinationType] = new ObjectConversionProfile(destinationType));
+            if (converter is null)
+            {
+                converter = TypeCategory.Object == ConversionUtils.CategoryOf(destinationType)
+                    ? GetObjectConverterFor(destinationType)
+                    : throw new InvalidOperationException($"Could not find a converter for type: {destinationType}, ion-type: {ion.Type}");
+            }
 
-            return converter.FromIon(destinationType, ion, options);
+            return converter.ToClr(destinationType, ion, context.Next());
         }
+
+        private static ObjectConverter GetObjectConverterFor(Type type)
+            => ObjectConverters.GetOrAdd(type, _type => new ObjectConverter(_type));
+
     }
 }

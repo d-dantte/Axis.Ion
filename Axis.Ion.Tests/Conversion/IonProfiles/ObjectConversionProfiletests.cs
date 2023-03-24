@@ -1,5 +1,5 @@
 ﻿using Axis.Ion.Conversion;
-using Axis.Ion.Conversion.IonProfiles;
+using Axis.Ion.Conversion.Converters;
 using Axis.Ion.Types;
 using System;
 using System.Collections.Generic;
@@ -15,38 +15,94 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
         [TestMethod]
         public void Creation_Tests()
         {
-            var profile = new ObjectConversionProfile(typeof(Poco1));
+            var profile = new ObjectConverter(typeof(Poco1));
             Assert.IsNotNull(profile);
         }
 
         [TestMethod]
-        public void CanConvert_Tests()
+        public void CanConvertToIon_Tests()
         {
-            var profile = new ObjectConversionProfile(typeof(Poco1));
-            var result = profile.CanConvert(typeof(Poco1));
+            var poco = new Poco1(false);
+            var profile = new ObjectConverter(typeof(Poco1));
+            var result = profile.CanConvert(typeof(Poco1), poco);
             Assert.IsTrue(result);
 
-            result = profile.CanConvert(typeof(object));
+            result = profile.CanConvert(typeof(object), poco);
+            Assert.IsTrue(result);
+
+            result = profile.CanConvert(typeof(Poco1), new object());
             Assert.IsFalse(result);
+
+            Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(null, poco));
+        }
+
+        [TestMethod]
+        public void CanConvertToClr_Tests()
+        {
+            var ion = IonStruct.Null();
+            var profile = new ObjectConverter(typeof(Poco1));
+            var result = profile.CanConvert(typeof(Poco1), ion);
+            Assert.IsTrue(result);
+
+            result = profile.CanConvert(typeof(object), ion);
+            Assert.IsFalse(result);
+
+            result = profile.CanConvert(typeof(Poco1), IonBool.Null());
+            Assert.IsFalse(result);
+
+            Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(null, ion));
+            Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(typeof(Poco1), null));
         }
 
         [TestMethod]
         public void ToIon_Tests()
         {
-            var options = new ConversionOptions();
-            var profile = new ObjectConversionProfile(typeof(Poco1));
+            var context = new ConversionContext(ConversionOptionsBuilder.NewBuilder().Build());
+            var profile = new ObjectConverter(typeof(Poco1));
             var instance = new Poco1(5, "stuff", true, DateTimeOffset.Now);
 
-            var ion = profile.ToIon(typeof(Poco1), instance, options);
+            var ion = profile.ToIon(typeof(Poco1), instance, context);
             Assert.IsNotNull(ion);
             Assert.AreEqual(IonTypes.Struct, ion.Type);
+
+            ion = profile.ToIon(typeof(Poco1), null, context);
+            Assert.IsTrue(ion.IsNull);
+
+            // with ignored properties
+            context = new ConversionContext(ConversionOptionsBuilder
+                .NewBuilder()
+                .WithIgnoredProperties(typeof(Poco1), nameof(Poco1.Prop1))
+                .Build());
+
+            ion = profile.ToIon(typeof(Poco1), instance, context);
+            var @struct = (IonStruct)ion;
+            Assert.IsFalse(@struct.Properties.Contains(nameof(Poco1.Prop1)));
+
+            // with ignored nulls
+            instance = new Poco1(5, null, true, DateTimeOffset.Now);
+            context = new ConversionContext(ConversionOptionsBuilder
+                .NewBuilder()
+                .WithNullValueBehavior(NullValueBehavior.Ignore)
+                .Build());
+            ion = profile.ToIon(typeof(Poco1), instance, context);
+            @struct = (IonStruct)ion;
+            Assert.IsFalse(@struct.Properties.Contains(nameof(Poco1.Prop2)));
+
+            // with ignored defaults
+            instance = new Poco1(5, "stuff", false, DateTimeOffset.Now);
+            context = new ConversionContext(ConversionOptionsBuilder
+                .NewBuilder()
+                .WithDefaultValueBehavior(DefaultValueBehavior.Ignore)
+                .Build());
+            ion = profile.ToIon(typeof(Poco1), instance, context);
+            @struct = (IonStruct)ion;
+            Assert.IsFalse(@struct.Properties.Contains(nameof(Poco1.Prop3)));
         }
 
-
         [TestMethod]
-        public void FromIon_Tests()
+        public void ToClr_Tests()
         {
-            var options = new ConversionOptions();
+            var options = new ConversionContext(ConversionOptionsBuilder.NewBuilder().Build());
             var initializer = new IonStruct.Initializer
             {
                 ["Prop1"] = 4,
@@ -57,23 +113,23 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
             var ionStruct = new IonStruct(initializer);
 
             // poco 1
-            var profile = new ObjectConversionProfile(typeof(Poco1));
-            var instance = profile.FromIon(typeof(Poco1), ionStruct, options);
+            var profile = new ObjectConverter(typeof(Poco1));
+            var instance = profile.ToClr(typeof(Poco1), ionStruct, options);
             Assert.IsNotNull(instance);
 
             // poco 2
-            profile = new ObjectConversionProfile(typeof(Poco2));
-            instance = profile.FromIon(typeof(Poco2), ionStruct, options);
+            profile = new ObjectConverter(typeof(Poco2));
+            instance = profile.ToClr(typeof(Poco2), ionStruct, options);
             Assert.IsNotNull(instance);
 
             // poco 3
-            profile = new ObjectConversionProfile(typeof(Poco3));
-            instance = profile.FromIon(typeof(Poco3), ionStruct, options);
+            profile = new ObjectConverter(typeof(Poco3));
+            instance = profile.ToClr(typeof(Poco3), ionStruct, options);
             Assert.IsNotNull(instance);
 
             // poco 4
-            profile = new ObjectConversionProfile(typeof(Poco4));
-            Assert.ThrowsException<InvalidOperationException>(() => profile.FromIon(typeof(Poco4), ionStruct, options));
+            profile = new ObjectConverter(typeof(Poco4));
+            Assert.ThrowsException<InvalidOperationException>(() => profile.ToClr(typeof(Poco4), ionStruct, options));
         }
 
         public class Poco1
@@ -135,6 +191,7 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
             {
             }
         }
+
         public class Poco4
         {
             public int Prop1_ { get; set; }

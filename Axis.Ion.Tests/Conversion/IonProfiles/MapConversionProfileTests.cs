@@ -1,5 +1,5 @@
 ﻿using Axis.Ion.Conversion;
-using Axis.Ion.Conversion.IonProfiles;
+using Axis.Ion.Conversion.Converters;
 using Axis.Ion.Types;
 using System.Collections.Concurrent;
 
@@ -8,36 +8,70 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
     [TestClass]
     public class MapConversionProfileTests
     {
-        private static readonly MapConversionProfile profile = new MapConversionProfile();
+        private static readonly MapConverter profile = new MapConverter();
 
         [TestMethod]
-        public void CanConvert_Tests()
+        public void CanConvertToIon_Tests()
         {
             var mapType = typeof(Dictionary<string, object>);
-            var canConvert = profile.CanConvert(mapType);
+            object map = new Dictionary<string, object>();
+            var canConvert = profile.CanConvert(mapType, map);
             Assert.IsTrue(canConvert);
 
             mapType = typeof(Dictionary<Guid, object>);
-            canConvert = profile.CanConvert(mapType);
+            canConvert = profile.CanConvert(mapType, map);
             Assert.IsFalse(canConvert);
 
             mapType = typeof(ConcurrentDictionary<string, Uri>);
-            canConvert = profile.CanConvert(mapType);
+            map = new ConcurrentDictionary<string, Uri>();
+            canConvert = profile.CanConvert(mapType, map);
             Assert.IsTrue(canConvert);
 
             mapType = typeof(IDictionary<string, string>);
-            canConvert = profile.CanConvert(mapType);
+            map = new Dictionary<string, string>();
+            canConvert = profile.CanConvert(mapType, map);
             Assert.IsTrue(canConvert);
 
             mapType = typeof(ConcurrentDictionary<Guid, object>);
-            canConvert = profile.CanConvert(mapType);
+            map = new ConcurrentDictionary<Guid, object>();
+            canConvert = profile.CanConvert(mapType, map);
             Assert.IsFalse(canConvert);
+
+            Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(null, new ConcurrentDictionary<string, Uri>()));
+        }
+
+        [TestMethod]
+        public void CanConvertToClr_Tests()
+        {
+            var mapType = typeof(Dictionary<string, object>);
+            var map = IonStruct.Null();
+            var canConvert = profile.CanConvert(mapType, map);
+            Assert.IsTrue(canConvert);
+
+            mapType = typeof(Dictionary<Guid, object>);
+            canConvert = profile.CanConvert(mapType, map);
+            Assert.IsFalse(canConvert);
+
+            mapType = typeof(ConcurrentDictionary<string, Uri>);
+            canConvert = profile.CanConvert(mapType, map);
+            Assert.IsTrue(canConvert);
+
+            mapType = typeof(IDictionary<string, string>);
+            canConvert = profile.CanConvert(mapType, map);
+            Assert.IsTrue(canConvert);
+
+            mapType = typeof(ConcurrentDictionary<Guid, object>);
+            canConvert = profile.CanConvert(mapType, map);
+            Assert.IsFalse(canConvert);
+
+            Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(null, map));
+            Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(typeof(IDictionary<string, string>), null));
         }
 
         [TestMethod]
         public void ToIon_Tests()
         {
-            var options = new ConversionOptions();
+            var context = new ConversionContext(ConversionOptionsBuilder.NewBuilder().Build());
             var dictionary = new Dictionary<string, object>
             {
                 ["stuff"] = 4,
@@ -47,7 +81,7 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
                 ["the time stamp"] = DateTimeOffset.Now
             };
 
-            var ion = profile.ToIon(dictionary.GetType(), dictionary, options);
+            var ion = profile.ToIon(dictionary.GetType(), dictionary, context);
             Assert.IsNotNull(ion);
             Assert.IsTrue(ion is IonStruct @struct);
 
@@ -65,12 +99,15 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
 
             Assert.IsTrue(@struct.Properties.Contains("the time stamp"));
             Assert.AreEqual(IonTypes.Timestamp, @struct.Properties["the time stamp"].Type);
+
+            Assert.IsTrue(profile.ToIon(dictionary.GetType(), null, context).IsNull);
+            Assert.ThrowsException<ArgumentNullException>(() => profile.ToIon(null, dictionary, context));
         }
 
         [TestMethod]
-        public void FromIon_Tests()
+        public void ToClr_Tests()
         {
-            var options = new ConversionOptions();
+            var options = new ConversionContext(ConversionOptionsBuilder.NewBuilder().Build());
             var dt = DateTimeOffset.Now;
             var init = new IonStruct.Initializer
             {
@@ -82,7 +119,7 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
             };
             var ionStruct = new IonStruct(init);
 
-            var result = profile.FromIon(typeof(Dictionary<string, object>), ionStruct, options);
+            var result = profile.ToClr(typeof(Dictionary<string, object>), ionStruct, options);
             var map = result as Dictionary<string, object>;
 
             Assert.IsNotNull(result);

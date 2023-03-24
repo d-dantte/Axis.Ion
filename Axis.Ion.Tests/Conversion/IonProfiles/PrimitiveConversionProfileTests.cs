@@ -1,5 +1,5 @@
 ﻿using Axis.Ion.Conversion;
-using Axis.Ion.Conversion.IonProfiles;
+using Axis.Ion.Conversion.Converters;
 using Axis.Ion.Types;
 using System.Numerics;
 
@@ -8,48 +8,95 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
     [TestClass]
     public class PrimitiveConversionProfileTests
     {
-        private static readonly PrimitiveConversionProfile profile = new PrimitiveConversionProfile();
+        private static readonly PrimitiveConverter profile = new PrimitiveConverter();
 
         [TestMethod]
-        public void CanConvert_Tests()
+        public void CanConvertToIon_Tests()
         {
             var types = new[]
             {
-                typeof(short),
-                typeof(ushort),
-                typeof(int),
-                typeof(uint),
-                typeof(long),
-                typeof(ulong),
-                typeof(float),
-                typeof(double),
-                typeof(decimal),
-                typeof(bool),
-                typeof(DateTime),
-                typeof(DateTimeOffset),
-                typeof(BigInteger),
-                typeof(string)
+                (typeof(short), (object)(short)4),
+                (typeof(ushort), (ushort)4),
+                (typeof(int), 4),
+                (typeof(uint), (uint)4),
+                (typeof(long), 4l),
+                (typeof(ulong), 4ul),
+                (typeof(float), 4f),
+                (typeof(double), 4.0),
+                (typeof(decimal), 4m),
+                (typeof(bool), false),
+                (typeof(DateTime), DateTime.Now),
+                (typeof(DateTimeOffset), DateTimeOffset.Now),
+                (typeof(BigInteger), new BigInteger(4)),
+                (typeof(string), "stuff")
             };
 
             var nullableBase = typeof(Nullable<>);
 
             foreach (var type in types)
             {
-                var result = profile.CanConvert(type);
+                var result = profile.CanConvert(type.Item1, type.Item2);
                 Assert.IsTrue(result);
 
-                if (type != typeof(string))
+                if (type.Item1 != typeof(string))
                 {
-                    var nresult = profile.CanConvert(nullableBase.MakeGenericType(type));
+                    var nresult = profile.CanConvert(nullableBase.MakeGenericType(type.Item1), type.Item2);
                     Assert.IsTrue(nresult);
                 }
             }
 
-            Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(null));
+            Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(null, "stuff"));
+            Assert.IsFalse(profile.CanConvert(typeof(string), 5));
         }
 
         [TestMethod]
-        public void FromIon_Tests()
+        public void CanConvertToClr_Tests()
+        {
+            var ionInt = new IonInt(4);
+            var ionReal = new IonFloat(4);
+            var ionDecimal = new IonDecimal(4);
+            var ionBool = new IonBool(false);
+            var ionTimestamp = new IonTimestamp(DateTimeOffset.Now);
+            var ionString = new IonString("stuff");
+            var types = new[]
+            {
+                (typeof(short), (IIonType)ionInt),
+                (typeof(ushort), ionInt),
+                (typeof(int), ionInt),
+                (typeof(uint), ionInt),
+                (typeof(long), ionInt),
+                (typeof(ulong), ionInt),
+                (typeof(float), ionReal),
+                (typeof(double), ionReal),
+                (typeof(decimal), ionDecimal),
+                (typeof(bool), ionBool),
+                (typeof(DateTime), ionTimestamp),
+                (typeof(DateTimeOffset), ionTimestamp),
+                (typeof(BigInteger), ionInt),
+                (typeof(string), ionString)
+            };
+
+            var nullableBase = typeof(Nullable<>);
+
+            foreach (var type in types)
+            {
+                var result = profile.CanConvert(type.Item1, type.Item2);
+                Assert.IsTrue(result);
+
+                if (type.Item1 != typeof(string))
+                {
+                    var nresult = profile.CanConvert(nullableBase.MakeGenericType(type.Item1), type.Item2);
+                    Assert.IsTrue(nresult);
+                }
+            }
+
+            Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(null, IonString.Null()));
+            Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(typeof(string), (IIonType)null));
+            Assert.IsFalse(profile.CanConvert(typeof(string), 5));
+        }
+
+        [TestMethod]
+        public void ToClr_Tests()
         {
             var nullableBase = typeof(Nullable<>);
 
@@ -98,10 +145,10 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
                 (typeof(DateTimeOffset), timestampIon, ntimestampIon)
             };
 
-            var options = new ConversionOptions();
+            var context = new ConversionContext(ConversionOptionsBuilder.NewBuilder().Build());
 
-            Assert.ThrowsException<ArgumentNullException>(() => profile.FromIon(null, intIon, options));
-            Assert.ThrowsException<ArgumentNullException>(() => profile.FromIon(typeof(int), null, options));
+            Assert.ThrowsException<ArgumentNullException>(() => profile.ToClr(null, intIon, context));
+            Assert.ThrowsException<ArgumentNullException>(() => profile.ToClr(typeof(int), null, context));
 
             foreach (var info in types)
             {
@@ -110,36 +157,36 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
                 var ntype = nullableBase.MakeGenericType(info.type);
 
                 // primitive/ion
-                result = profile.FromIon(info.type, info.ion, options);
+                result = profile.ToClr(info.type, info.ion, context);
                 Assert.IsNotNull(result);
                 Assert.AreEqual(info.type, result.GetType());
 
                 // primitive/null-ion-primitive
-                result = profile.FromIon(info.type, info.nullIon, options);
+                result = profile.ToClr(info.type, info.nullIon, context);
                 Assert.IsNull(result);
 
                 // nullable-primitive/ion-primitive
-                result = profile.FromIon(ntype, info.ion, options);
+                result = profile.ToClr(ntype, info.ion, context);
                 Assert.IsNotNull(result);
                 Assert.AreEqual(info.type, result.GetType());
 
                 // nullable-primitive/null-ion-primitive
-                result = profile.FromIon(ntype, info.nullIon, options);
+                result = profile.ToClr(ntype, info.nullIon, context);
                 Assert.IsNull(result);
 
                 // primitive/ion-non-primitive
-                Assert.ThrowsException<ArgumentException>(() => profile.FromIon(info.type, nullIon, options));
+                Assert.ThrowsException<ArgumentException>(() => profile.ToClr(info.type, nullIon, context));
                 Assert.IsNull(result);
 
                 // nullable-primitive/ion-non-primitive
-                Assert.ThrowsException<ArgumentException>(() => profile.FromIon(ntype, nullIon, options));
+                Assert.ThrowsException<ArgumentException>(() => profile.ToClr(ntype, nullIon, context));
             }
 
             // sstring
-            var result2 = profile.FromIon(typeof(string), stringIon, options);
+            var result2 = profile.ToClr(typeof(string), stringIon, context);
             Assert.AreEqual(stringIon.IonValue(), result2);
 
-            result2 = profile.FromIon(typeof(string), nstringIon, options);
+            result2 = profile.ToClr(typeof(string), nstringIon, context);
             Assert.IsNull(result2);
         }
 
@@ -163,7 +210,7 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
                 (typeof(DateTimeOffset), typeof(DateTimeOffset?), IonTypes.Timestamp, (object)DateTimeOffset.Now)
             };
 
-            var options = new ConversionOptions();
+            var options = new ConversionContext(ConversionOptionsBuilder.NewBuilder().Build());
 
             Assert.ThrowsException<ArgumentNullException>(() => profile.ToIon(null, null, options));
 

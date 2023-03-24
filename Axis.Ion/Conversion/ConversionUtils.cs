@@ -1,15 +1,48 @@
-﻿using Axis.Ion.Types;
+﻿using Axis.Ion.Conversion.ClrReflection;
+using Axis.Ion.Types;
 using Axis.Luna.Extensions;
+using Axis.Luna.FInvoke;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Axis.Ion.Conversion.IonProfiles
+namespace Axis.Ion.Conversion
 {
-    public interface IConversionProfile : IConverter
+    public static class ConversionUtils
     {
-        #region Static Helpers - Move all of these into a separate helper util class
+        internal static readonly string ObjectRefPrefix = "@Ref-";
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="TItem"></typeparam>
+        /// <param name="enumerable"></param>
+        /// <param name="exception"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        internal static IEnumerable<TItem> ThrowIfContainsNull<TItem>(this IEnumerable<TItem> enumerable, Exception exception)
+        {
+            if (enumerable is null)
+                throw new ArgumentNullException(nameof(enumerable));
+
+            if (exception is null)
+                throw new ArgumentNullException(nameof(exception));
+
+            return enumerable.Select(item =>
+            {
+                if (item is null)
+                    exception.Throw();
+
+                return item;
+            });
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="clrType"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
         internal static TypeCategory CategoryOf(Type clrType)
         {
             if (clrType is null)
@@ -34,7 +67,7 @@ namespace Axis.Ion.Conversion.IonProfiles
                     : TypeCategory.Map;
 
             if (IsCollection(type))
-                return HasNonDefaultWritableProperties(type, "Item", "Capacity")
+                return  HasNonDefaultWritableProperties(type, "Item", "Capacity")
                     ? TypeCategory.ComplexCollection
                     : TypeCategory.Collection;
 
@@ -44,6 +77,14 @@ namespace Axis.Ion.Conversion.IonProfiles
             return TypeCategory.InvalidType;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="ionType"></param>
+        /// <param name="clrType"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentException"></exception>
         internal static bool AreCompatible(IonTypes ionType, Type clrType)
         {
             if (clrType is null)
@@ -105,19 +146,110 @@ namespace Axis.Ion.Conversion.IonProfiles
             return ionToClrType;
         }
 
-        /// <summary>
-        /// Checks that the <paramref name="sourceType"/> is assignable from <paramref name="instanceType"/>
-        /// </summary>
-        /// <param name="sourceType">The source type</param>
-        /// <param name="instanceType">the instance type</param>
-        internal static void ValidateSourceTypeCompatibility(Type sourceType, Type? instanceType)
+        internal static IonTypes CompatibleIonType(Type clrType)
         {
-            if (sourceType is null)
-                throw new ArgumentNullException(nameof(sourceType));
+            return CategoryOf(clrType) switch
+            {
+                TypeCategory.Object => IonTypes.Struct,
+                TypeCategory.ComplexMap => IonTypes.Struct,
+                TypeCategory.ComplexCollection => IonTypes.Struct,
+                TypeCategory.Map => IonTypes.Struct,
+                TypeCategory.Collection => IonTypes.List,
+                TypeCategory.SingleDimensionArray => IonTypes.List,
+                TypeCategory.Enum => IonTypes.IdentifierSymbol,
+                TypeCategory.Primitive =>
+                    clrType.IsIntegral(out _) ? IonTypes.Int:
+                    clrType.IsReal(out _) ? IonTypes.Float:
+                    clrType.IsDecimal(out _) ? IonTypes.Decimal:
+                    clrType.IsBoolean(out _) ? IonTypes.Bool:
+                    clrType.IsDateTime(out _) ? IonTypes.Timestamp:
+                    clrType.IsString() ? IonTypes.String:
+                    throw new ArgumentException($"Invalid primitive clr type: {clrType}"),
+                _ => throw new ArgumentException($"Invalid clr type: {clrType}")
+            };
+        }
 
-            if (instanceType is not null
-                && !sourceType.IsAssignableFrom(instanceType))
-                throw new ArgumentException($"source-type: {sourceType}, and instance-type: {instanceType}, are incompatible");
+        /// <summary>
+        /// Checks that the <paramref name="targetType"/> is assignable from <paramref name="instanceType"/>
+        /// </summary>
+        /// <param name="targetType">The source type</param>
+        /// <param name="instanceType">the instance type</param>
+        internal static void ValidateCongruenceWith(this Type targetType, Type? instanceType)
+        {
+            if (!targetType.IsCongruentWith(instanceType))
+                throw new ArgumentException($"source-type: {targetType}, and instance-type: {instanceType?.ToString() ?? ("null")}, are incompatible");
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="targetType"></param>
+        /// <param name="instanceType"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        internal static bool IsCongruentWith(this Type targetType, Type? instanceType)
+        {
+            if (targetType is null)
+                throw new ArgumentNullException(nameof(targetType));
+
+            return instanceType is null
+                || targetType.IsAssignableFrom(instanceType);
+        }
+
+
+        /// <summary>
+        /// Specialized method that converts the ion to an object, resolving object-refs if found
+        /// </summary>
+        /// <param name="targetType"></param>
+        /// <param name="ion"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        internal static object? ToClrObject(this
+            IIonType ion,
+            Type targetType,
+            ConversionContext context)
+        {
+            if (ion is null)
+                throw new ArgumentNullException(nameof(ion));
+
+            var objectIdAnnotation = ion.Annotations.FirstOrNull(ann => ann.Value.StartsWith(ObjectRefPrefix));
+
+            var objectId =
+                objectIdAnnotation is not null ? objectIdAnnotation.Value.Value.TrimStart(ObjectRefPrefix) :
+                ion is IonQuotedSymbol quoted ? quoted.Value.TrimStart(ObjectRefPrefix) :
+                null;
+
+            return objectId switch
+            {
+                null => Ionizer.ToClr(targetType, ion, context),
+                _ => context.GetOrAdd(objectId, _ => Ionizer.ToClr(targetType, ion, context))
+            };
+        }
+
+
+        internal static IIonType ToIonValue(this
+            object? clrValue,
+            Type targetType,
+            ConversionContext context)
+        {
+            if (targetType is null)
+                throw new ArgumentNullException(nameof(targetType));
+
+            var clrType = clrValue?.GetType() ?? targetType;
+
+            if (clrValue is null)
+                return IIonType.NullOf(CompatibleIonType(clrType));
+
+            var ion = CategoryOf(targetType) switch
+            {
+                TypeCategory.Enum => Ionizer.ToIon(clrType, clrValue, context),
+                TypeCategory.Primitive => Ionizer.ToIon(clrType, clrValue, context),
+                TypeCategory.InvalidType => throw new ArgumentException($"Invalid target type: {targetType}"),
+                _ => context.TryTrack(clrValue, out var id)
+                    ? Ionizer.ToIon(clrType, clrValue, context)
+                    : new IonQuotedSymbol($"{ObjectRefPrefix}{id}")
+            };
+            return ion;
         }
 
         private static bool IsPrimitive(Type type)
@@ -129,6 +261,12 @@ namespace Axis.Ion.Conversion.IonProfiles
                 return true;
 
             if (typeof(DateTime).Equals(type))
+                return true;
+
+            if (typeof(string).Equals(type))
+                return true;
+
+            if (typeof(decimal).Equals(type))
                 return true;
 
             return false;
@@ -218,12 +356,15 @@ namespace Axis.Ion.Conversion.IonProfiles
             return true;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
         private static bool IsBaseDictionaryInterface(Type type)
         {
             return type.IsGenericType
                 && typeof(IDictionary<,>).Equals(type.GetGenericTypeDefinition());
         }
-
-        #endregion
     }
 }
