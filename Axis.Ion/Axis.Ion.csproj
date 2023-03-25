@@ -1,10 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1;net6.0</TargetFrameworks>
+    <TargetFrameworks>net7.0</TargetFrameworks>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Version>0.0.2</Version>
+    <Authors>Dantte</Authors>
+    <Company>Axiis</Company>
+    <Description>Lightweight Implementation of Amazon's ion data serialization format.</Description>
+    <PackageProjectUrl>https://github.com/d-dantte/Axis.Ion</PackageProjectUrl>
+    <RepositoryType>https://github.com/d-dantte/Axis.Ion</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
   </PropertyGroup>
   
 
@@ -13,11 +22,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Axis.Luna.Common" Version="6.0.5" />
-    <PackageReference Include="Axis.Luna.Extensions" Version="6.0.4" />
-    <PackageReference Include="Axis.Luna.FInvoke" Version="6.0.5" />
-    <PackageReference Include="Axis.Pulsar.Grammar" Version="0.7.5" />
-    <PackageReference Include="Axis.Pulsar.Languages" Version="0.7.3" />
+    <PackageReference Include="Axis.Luna.Common" Version="6.0.6" />
+    <PackageReference Include="Axis.Luna.Extensions" Version="6.0.6" />
+    <PackageReference Include="Axis.Luna.FInvoke" Version="6.0.6" />
+    <PackageReference Include="Axis.Pulsar.Grammar" Version="0.7.7" />
+    <PackageReference Include="Axis.Pulsar.Languages" Version="0.7.7" />
   </ItemGroup>
 
   <ItemGroup>

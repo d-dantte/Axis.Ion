@@ -108,7 +108,7 @@ namespace Axis.Ion.IO.Text.Streamers
                 0 => "{{ \"\" }}",
                 1 => $"{{{{ {lines[0]} }}}}",
                 _ => lines
-                    .AppendAt(0, "")
+                    .Prepend("")
                     .JoinUsing($"{Environment.NewLine}{context.Indentation(1)}")
                     .WrapIn("{{", $"{Environment.NewLine}}}}}")
             };
