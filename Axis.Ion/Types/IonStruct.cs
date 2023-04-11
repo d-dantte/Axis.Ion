@@ -32,7 +32,7 @@ namespace Axis.Ion.Types
 
         public IonStruct(Initializer? initializer)
         {
-            _annotations = initializer?.Annotations.ToArray();
+            _annotations = initializer?.Annotations.Validate().ToArray();
             _properties = initializer != null
                 ? new Dictionary<IIonTextSymbol, IIonType>(initializer.PropertyMap)
                 : null;
@@ -172,7 +172,9 @@ namespace Axis.Ion.Types
             public Property(IIonTextSymbol name, IIonType value)
             {
                 Value = value ?? throw new ArgumentNullException(nameof(value));
-                _propertyName = name ?? throw new ArgumentNullException(nameof(name));
+                _propertyName = name
+                    .ThrowIfNull(new ArgumentNullException(nameof(name)))
+                    .ThrowIf(n => n.IsNull, new ArgumentException("Null-symbol is forbidden"));
             }
 
             public override int GetHashCode() => HashCode.Combine(_propertyName, Value);
@@ -200,7 +202,7 @@ namespace Axis.Ion.Types
         /// Instances of this class are wrapped around the values of a struct and enable convenient key-value indexing
         /// of the structs properties
         /// </summary>
-        public struct PropertyMap : IIndexer<IIonTextSymbol, IIonType>
+        public readonly struct PropertyMap : IIndexer<IIonTextSymbol, IIonType>
         {
             private readonly Dictionary<IIonTextSymbol, IIonType> _properties;
 

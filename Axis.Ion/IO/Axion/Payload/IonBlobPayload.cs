@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Axis.Ion.IO.Axion.Payload
 {
-    public readonly struct IonBlobPayload : ITypePayload
+    public readonly struct IonBlobPayload : ITypePayload, ITypePayloadReader<IonBlobPayload>
     {
         public IonBlobPayload(IonBlob blob)
         {

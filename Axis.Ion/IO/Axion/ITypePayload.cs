@@ -7,6 +7,22 @@ using System.Threading.Tasks;
 
 namespace Axis.Ion.IO.Axion
 {
+    public interface ITypePayloadReader<TTypePayload> where TTypePayload : ITypePayload
+    {
+        static abstract bool TryRead(
+            Stream stream,
+            TypeMetadata metadata,
+            SerializerOptions options,
+            SymbolHashList symbolTable,
+            out TTypePayload payload);
+
+        static abstract TTypePayload Read(
+            Stream stream,
+            TypeMetadata metadata,
+            SerializerOptions options,
+            SymbolHashList symbolTable);
+    }
+
     /// <summary>
     /// A structured representation of the binary data that is written/read
     /// </summary>

@@ -7,6 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Axis.Ion", "Axis.Ion\Axis.I
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".items", ".items", "{37E1CFF6-E6BC-428A-8387-8A65EBF011E2}"
 	ProjectSection(SolutionItems) = preProject
+		Axis.Ion.ReadMe.md = Axis.Ion.ReadMe.md
 		BinarySpec.md = BinarySpec.md
 		TODO.md = TODO.md
 	EndProjectSection

@@ -8,36 +8,46 @@ using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
+    /// <summary>
+    /// list of items
+    /// </summary>
     public readonly struct IonList : IIonConainer<IIonType>, IReadonlyIndexer<int, IIonType>
     {
         private readonly IIonType.Annotation[]? _annotations;
-        private readonly IIonType[]? _elements;
+        private readonly List<IIonType>? _elements;
 
+        /// <summary>
+        /// A copy of the internal array of items is returned
+        /// </summary>
         public IIonType[]? Value => _elements?.ToArray();
 
         public IonTypes Type => IonTypes.List;
 
         public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
 
-        public int Count => _elements?.Length ?? -1;
+        public int Count => _elements?.Count ?? -1;
 
         public IIonType this[int key]
         {
             get => _elements?[key] ?? throw new InvalidOperationException($"Cannot read from the default {nameof(IonList)}");
         }
 
+        public List<IIonType>? Items => _elements;
+
         public IonList(Initializer? initializer)
         {
             _annotations = initializer?.Annotations
                 .Validate()
                 .ToArray();
-            _elements = initializer?.Elements.ToArray();
+            _elements = initializer?.Elements.ToList();
         }
 
         public IonList(params IIonType.Annotation[] annotations)
         {
-            _annotations = annotations?.ToArray();
             _elements = null;
+            _annotations = annotations
+                .Validate()
+                .ToArray();
         }
 
         /// <summary>

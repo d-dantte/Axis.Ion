@@ -6,7 +6,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Version>0.0.2</Version>
+    <Version>0.0.3</Version>
     <Authors>Dantte</Authors>
     <Company>Axiis</Company>
     <Description>Lightweight Implementation of Amazon's ion data serialization format.</Description>
@@ -16,6 +16,13 @@
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
   </PropertyGroup>
   
+  
+  <ItemGroup>
+    <None Include="..\axis.ion.readme.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="IO\Text\IonGrammar.xbnf" />

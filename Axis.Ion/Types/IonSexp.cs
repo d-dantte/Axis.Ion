@@ -11,15 +11,17 @@ namespace Axis.Ion.Types
     public readonly struct IonSexp : IIonConainer<IIonType>, IReadonlyIndexer<int, IIonType>
     {
         private readonly IIonType.Annotation[]? _annotations;
-        private readonly IIonType[]? _elements;
+        private readonly List<IIonType>? _elements;
 
         public IIonType[]? Value => _elements?.ToArray();
+
+        public List<IIonType>? Items => _elements;
 
         public IonTypes Type => IonTypes.Sexp;
 
         public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
 
-        public int Count => _elements?.Length ?? -1;
+        public int Count => _elements?.Count ?? -1;
 
         public IIonType this[int key]
         {
@@ -31,12 +33,12 @@ namespace Axis.Ion.Types
             _annotations = initializer?.Annotations
                 .Validate()
                 .ToArray();
-            _elements = initializer?.Elements.ToArray();
+            _elements = initializer?.Elements.ToList();
         }
 
         public IonSexp(params IIonType.Annotation[] annotations)
         {
-            _annotations = annotations?.ToArray();
+            _annotations = annotations.Validate().ToArray();
             _elements = null;
         }
 

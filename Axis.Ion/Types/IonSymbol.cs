@@ -233,7 +233,7 @@ namespace Axis.Ion.Types
                 IdentifierPattern.IsMatch(symbolText) ? symbolText :
                 throw new FormatException($"Invalid identifier format: {symbolText}");
 
-            _annotations = annotations.Validate();
+            _annotations = annotations.Validate().ToArray();
         }
 
         /// <summary>
@@ -338,7 +338,7 @@ namespace Axis.Ion.Types
         public IonQuotedSymbol(string? symbolText, params IIonType.Annotation[] annotations)
         {
             Value = Normalize(symbolText);
-            _annotations = annotations.Validate();
+            _annotations = annotations.Validate().ToArray();
         }
 
         private static string? Normalize(string? symbolText)
