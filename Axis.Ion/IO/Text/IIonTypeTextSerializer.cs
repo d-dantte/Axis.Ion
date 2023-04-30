@@ -1,5 +1,6 @@
 ﻿using Axis.Ion.Types;
 using Axis.Luna.Common;
+using Axis.Luna.Common.Results;
 using Axis.Pulsar.Grammar.CST;
 
 namespace Axis.Ion.IO.Text

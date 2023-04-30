@@ -1,4 +1,5 @@
 ﻿using Axis.Luna.Common;
+using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using System;
 using System.Linq;
@@ -123,7 +124,7 @@ namespace Axis.Ion.Types
 
         public static bool operator !=(IonOperator first, IonOperator second) => !first.Equals(second);
 
-        public static implicit operator IonOperator(Operators[]? @operator) => new IonOperator(@operator);
+        public static implicit operator IonOperator(Operators[] @operator) => new IonOperator(@operator);
 
         #endregion
 
@@ -162,7 +163,7 @@ namespace Axis.Ion.Types
                 return false;
             }
 
-            var results = @string
+            IResult<IonOperator>[] results = @string
                 .Trim()
                 .Select(@char => (Operators)@char)
                 .GroupBy(op => op.IsEnumDefined())
@@ -176,8 +177,8 @@ namespace Axis.Ion.Types
                 .ToArray();
 
             result = results.Length == 2
-                ? results.FirstOrDefault(r => r is IResult<IonOperator>.ErrorResult)
-                : results[0];
+                ? results!.First(r => r is IResult<IonOperator>.ErrorResult)
+                : results![0];
 
             return result is IResult<IonOperator>.DataResult;
         }

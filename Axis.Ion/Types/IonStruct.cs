@@ -75,17 +75,20 @@ namespace Axis.Ion.Types
             if (otherProperties == null && thisProperties == null)
                 return true;
 
-            if (thisProperties?.Count == otherProperties?.Length)
+            if (otherProperties == null ^ thisProperties == null)
+                return false;
+
+            if (thisProperties!.Count == otherProperties!.Length)
             {
                 return otherProperties
                     .Select(prop => (
-                        Value: prop.Value,
+                        prop.Value,
                         Name: prop.Name ?? throw new InvalidOperationException("Property name cannot be null")))
                     .OrderBy(ptuple => ptuple.Name.ToIonText())
                     .All(ptuple =>
                     {
                         return thisProperties?.TryGetValue(ptuple.Name, out var value) == true
-                        && value.NullOrEquals(ptuple.Value) == true;
+                            && value.NullOrEquals(ptuple.Value) == true;
                     });
             }
 
@@ -97,7 +100,7 @@ namespace Axis.Ion.Types
             if (_properties == null)
                 return "null.struct";
 
-            return Value
+            return Value!
                 .Select(v => v.ToString())
                 .JoinUsing(", ")
                 .WrapIn("{", "}");

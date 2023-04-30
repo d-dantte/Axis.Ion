@@ -2,6 +2,7 @@
 using Axis.Luna.Common;
 using System;
 using System.Linq;
+using Axis.Luna.Common.Results;
 
 namespace Axis.Ion.Types
 {

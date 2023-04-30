@@ -6,7 +6,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Version>0.0.5</Version>
+    <Version>0.0.6</Version>
     <Authors>Dantte</Authors>
     <Company>Axiis</Company>
     <Description>Lightweight Implementation of Amazon's ion data serialization format.</Description>
