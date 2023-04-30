@@ -30,7 +30,7 @@ namespace Axis.Ion.Types
     /// <summary>
     /// The base for all ion values
     /// </summary>
-    public interface IIonType
+    public interface IIonType: IIonDeepCopyable<IIonType>
     {
         #region NullOf
         /// <summary>
@@ -86,7 +86,6 @@ namespace Axis.Ion.Types
         /// </summary>
         /// <returns></returns>
         string ToIonText();
-
         #endregion
 
         #region Nested types
@@ -238,5 +237,11 @@ namespace Axis.Ion.Types
     /// <typeparam name="TValue"></typeparam>
     public interface IIonConainer<TValue>: IRefValue<TValue[]>
     {
+    }
+
+    public interface IIonDeepCopyable<TIon>
+    where TIon : IIonDeepCopyable<TIon>
+    {
+        TIon DeepCopy();
     }
 }

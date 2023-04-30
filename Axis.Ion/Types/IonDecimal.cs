@@ -1,4 +1,5 @@
-﻿using Axis.Ion.Utils;
+﻿using Axis.Ion.Numerics;
+using Axis.Luna.Common.Numerics;
 using Axis.Luna.Extensions;
 using System;
 using System.Linq;
@@ -6,7 +7,7 @@ using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
-    public readonly struct IonDecimal : IStructValue<decimal>
+    public readonly struct IonDecimal : IStructValue<decimal>, IIonDeepCopyable<IonDecimal>, INumericType
     {
         private readonly IIonType.Annotation[] _annotations;
 
@@ -31,7 +32,6 @@ namespace Axis.Ion.Types
         /// <returns>The newly created null instance</returns>
         public static IonDecimal Null(params IIonType.Annotation[] annotations) => new IonDecimal(null, annotations);
 
-
         #region IIonType
 
         public bool IsNull => Value == null;
@@ -42,6 +42,10 @@ namespace Axis.Ion.Types
             ? Value.Value.ToExponentNotation("D")
             : "null.decimal";
 
+        #endregion
+
+        #region INumericType
+        public BigDecimal? ToBigDecimal() => Value == null ? null : new BigDecimal(Value.Value);
         #endregion
 
         #region Record Implementation
@@ -65,6 +69,12 @@ namespace Axis.Ion.Types
 
         public static bool operator !=(IonDecimal first, IonDecimal second) => !first.Equals(second);
 
+        #endregion
+
+        #region IIonDeepCopy<>
+        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+
+        public IonDecimal DeepCopy() => new IonDecimal(Value, Annotations);
         #endregion
 
         public static implicit operator IonDecimal(decimal? value) => new IonDecimal(value);

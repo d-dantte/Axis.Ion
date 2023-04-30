@@ -11,7 +11,10 @@ namespace Axis.Ion.Types
     /// <summary>
     /// list of items
     /// </summary>
-    public readonly struct IonList : IIonConainer<IIonType>, IReadonlyIndexer<int, IIonType>
+    public readonly struct IonList :
+        IIonConainer<IIonType>,
+        IReadonlyIndexer<int, IIonType>,
+        IIonDeepCopyable<IonList>
     {
         private readonly IIonType.Annotation[]? _annotations;
         private readonly List<IIonType>? _elements;
@@ -106,6 +109,21 @@ namespace Axis.Ion.Types
 
         public static bool operator !=(IonList first, IonList second) => !first.Equals(second);
 
+        #endregion
+
+        #region IIonDeepCopy<>
+        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+
+        public IonList DeepCopy()
+        {
+            var annotations = Annotations;
+            return IsNull
+                ? new IonList(Annotations)
+                : Value!
+                    .Select(value => value.DeepCopy())
+                    .ToArray()
+                    .ApplyTo(values => new Initializer(annotations, values));
+        }
         #endregion
 
         public static implicit operator IonList(Initializer? initializer) => new IonList(initializer);

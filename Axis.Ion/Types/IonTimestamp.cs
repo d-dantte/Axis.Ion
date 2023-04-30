@@ -5,7 +5,7 @@ using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
-    public readonly struct IonTimestamp : IStructValue<DateTimeOffset>
+    public readonly struct IonTimestamp : IStructValue<DateTimeOffset>, IIonDeepCopyable<IonTimestamp>
     {
         internal static readonly string Format = "yyyy-MM-ddTHH:mm:ss.ffffffzzz";
 
@@ -62,6 +62,12 @@ namespace Axis.Ion.Types
 
         public static bool operator !=(IonTimestamp first, IonTimestamp second) => !first.Equals(second);
 
+        #endregion
+
+        #region IIonDeepCopy<>
+        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+
+        public IonTimestamp DeepCopy() => new IonTimestamp(Value, Annotations);
         #endregion
 
         public IonTimestamp Copy(Precision precision = Precision.Millisecond)

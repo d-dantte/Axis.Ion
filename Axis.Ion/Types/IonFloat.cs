@@ -1,11 +1,13 @@
-﻿using Axis.Luna.Extensions;
+﻿using Axis.Ion.Numerics;
+using Axis.Luna.Common.Numerics;
+using Axis.Luna.Extensions;
 using System;
 using System.Linq;
 using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
-    public readonly struct IonFloat : IStructValue<double>
+    public readonly struct IonFloat : IStructValue<double>, IIonDeepCopyable<IonFloat>, INumericType
     {
         private readonly IIonType.Annotation[] _annotations;
 
@@ -47,6 +49,10 @@ namespace Axis.Ion.Types
 
         #endregion
 
+        #region INumericType
+        public BigDecimal? ToBigDecimal() => Value == null ? null : new BigDecimal(Value.Value);
+        #endregion
+
         #region Record Implementation
         public override int GetHashCode()
             => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonType.Annotation, object>()));
@@ -68,6 +74,12 @@ namespace Axis.Ion.Types
 
         public static bool operator !=(IonFloat first, IonFloat second) => !first.Equals(second);
 
+        #endregion
+
+        #region IIonDeepCopy<>
+        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+
+        public IonFloat DeepCopy() => new IonFloat(Value, Annotations);
         #endregion
 
         public static implicit operator IonFloat(double? value) => new IonFloat(value);

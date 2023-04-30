@@ -9,7 +9,7 @@ namespace Axis.Ion.Types
     /// Represents a readonly array of bytes. The array returned by <see cref="IonBlob.Value"/> is always a copy of the internal
     /// array, that way, array elements cannot be reassigned.
     /// </summary>
-    public readonly struct IonBlob : IRefValue<byte[]>
+    public readonly struct IonBlob : IRefValue<byte[]>, IIonDeepCopyable<IonBlob>
     {
         private readonly IIonType.Annotation[] _annotations;
         private readonly byte[]? _blob;
@@ -54,7 +54,6 @@ namespace Axis.Ion.Types
 
         #endregion
 
-
         #region Record Implementation
         public override int GetHashCode()
             => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonType.Annotation, object>()));
@@ -71,11 +70,16 @@ namespace Axis.Ion.Types
             .Concat(ToIonText())
             .JoinUsing("");
 
-
         public static bool operator ==(IonBlob first, IonBlob second) => first.Equals(second);
 
         public static bool operator !=(IonBlob first, IonBlob second) => !first.Equals(second);
 
+        #endregion
+
+        #region IIonDeepCopy<>
+        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+
+        public IonBlob DeepCopy() => new IonBlob(_blob, _annotations);
         #endregion
 
         public static implicit operator IonBlob(byte[]? value) => new IonBlob(value);

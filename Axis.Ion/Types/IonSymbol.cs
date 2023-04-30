@@ -36,7 +36,7 @@ namespace Axis.Ion.Types
     /// <summary>
     /// NOTE: an operator is a SEQUENCE of ONE OR MORE operator characters.
     /// </summary>
-    public readonly struct IonOperator : IRefValue<Operators[]>
+    public readonly struct IonOperator : IRefValue<Operators[]>, IIonDeepCopyable<IonOperator>
     {
         private readonly IIonType.Annotation[] _annotations;
 
@@ -125,6 +125,12 @@ namespace Axis.Ion.Types
 
         public static implicit operator IonOperator(Operators[]? @operator) => new IonOperator(@operator);
 
+        #endregion
+
+        #region IIonDeepCopy<>
+        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+
+        public IonOperator DeepCopy() => new IonOperator(Value, Annotations);
         #endregion
 
         #region Parsing
@@ -218,7 +224,7 @@ namespace Axis.Ion.Types
     /// <summary>
     /// Ion Identifier symbol - unquoted word characters
     /// </summary>
-    public readonly struct IonIdentifier : IIonTextSymbol
+    public readonly struct IonIdentifier : IIonTextSymbol, IIonDeepCopyable<IonIdentifier>
     {
         private static readonly Regex IdentifierPattern = new Regex(
             "^[a-zA-Z_\\$][a-zA-Z0-9_\\$]*$",
@@ -286,6 +292,12 @@ namespace Axis.Ion.Types
 
         #endregion
 
+        #region IIonDeepCopy<>
+        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+
+        public IonIdentifier DeepCopy() => new IonIdentifier(Value, Annotations);
+        #endregion
+
         #region Parsing
         public static IonIdentifier Parse(string? @string, params IIonType.Annotation[] annotations)
         {
@@ -331,7 +343,7 @@ namespace Axis.Ion.Types
     /// <summary>
     /// Quoted symbol.
     /// </summary>
-    public readonly struct IonQuotedSymbol : IIonTextSymbol
+    public readonly struct IonQuotedSymbol : IIonTextSymbol, IIonDeepCopyable<IonQuotedSymbol>
     {
         private readonly IIonType.Annotation[] _annotations;
 
@@ -411,6 +423,12 @@ namespace Axis.Ion.Types
 
         public static implicit operator IonQuotedSymbol(string text) => Parse(text);
 
+        #endregion
+
+        #region IIonDeepCopy<>
+        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+
+        public IonQuotedSymbol DeepCopy() => new IonQuotedSymbol(Value, Annotations);
         #endregion
 
         #region Parsing

@@ -9,7 +9,7 @@ namespace Axis.Ion.Types
     /// <summary>
     /// Represents a stream of ASCII encoded bytes of characters
     /// </summary>
-    public readonly struct IonClob : IRefValue<byte[]>
+    public readonly struct IonClob : IRefValue<byte[]>, IIonDeepCopyable<IonClob>
     {
         private readonly IIonType.Annotation[] _annotations;
         private readonly byte[]? _clob;
@@ -80,6 +80,12 @@ namespace Axis.Ion.Types
 
         public static bool operator !=(IonClob first, IonClob second) => !first.Equals(second);
 
+        #endregion
+
+        #region IIonDeepCopy<>
+        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+
+        public IonClob DeepCopy() => new IonClob(Value, Annotations);
         #endregion
 
         public static implicit operator IonClob(byte[]? value) => new IonClob(value);

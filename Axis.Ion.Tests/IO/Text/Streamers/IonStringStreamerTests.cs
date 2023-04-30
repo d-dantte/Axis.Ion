@@ -1,11 +1,6 @@
 ﻿using Axis.Ion.IO.Text;
 using Axis.Ion.IO.Text.Streamers;
 using Axis.Ion.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Axis.Ion.Tests.IO.Text.Streamers
 {
@@ -136,7 +131,7 @@ namespace Axis.Ion.Tests.IO.Text.Streamers
             context = context.IndentContext();
             text1 = streamer.SerializeText(ion1, context);
             text2 = streamer.SerializeText(ion2, context);
-            text3 = streamer.SerializeText(new IonString("the fox\ndidn't jump,\r\nit leapt quantumly."), context);
+            text3 = streamer.SerializeText(ion3, context);
             text4 = streamer.SerializeText(ion4, context);
 
             result1 = streamer.ParseString(text1);

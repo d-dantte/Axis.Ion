@@ -8,7 +8,10 @@ using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
-    public readonly struct IonSexp : IIonConainer<IIonType>, IReadonlyIndexer<int, IIonType>
+    public readonly struct IonSexp : 
+        IIonConainer<IIonType>,
+        IReadonlyIndexer<int, IIonType>,
+        IIonDeepCopyable<IonSexp>
     {
         private readonly IIonType.Annotation[]? _annotations;
         private readonly List<IIonType>? _elements;
@@ -91,6 +94,21 @@ namespace Axis.Ion.Types
 
         public static bool operator !=(IonSexp first, IonSexp second) => !first.Equals(second);
 
+        #endregion
+
+        #region IIonDeepCopy<>
+        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+
+        public IonSexp DeepCopy()
+        {
+            var annotations = Annotations;
+            return IsNull
+                ? new IonSexp(Annotations)
+                : Value!
+                    .Select(value => value.DeepCopy())
+                    .ToArray()
+                    .ApplyTo(values => new Initializer(annotations, values));
+        }
         #endregion
 
         public static implicit operator IonSexp(Initializer? initializer) => new IonSexp(initializer);

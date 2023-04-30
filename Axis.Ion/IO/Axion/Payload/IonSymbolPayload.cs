@@ -247,7 +247,7 @@ namespace Axis.Ion.IO.Axion.Payload
         #endregion
 
         #region Nested types
-        public readonly struct IonSymbolID : IIonTextSymbol
+        public readonly struct IonSymbolID : IIonTextSymbol, IIonDeepCopyable<IonSymbolID>
         {
             public BigInteger? ID { get; }
 
@@ -290,6 +290,12 @@ namespace Axis.Ion.IO.Axion.Payload
             public static bool operator ==(IonSymbolID first, IonSymbolID second) => first.Equals(second);
 
             public static bool operator !=(IonSymbolID first, IonSymbolID second) => !first.Equals(second);
+            #endregion
+
+            #region IIonDeepCopy<>
+            IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+
+            public IonSymbolID DeepCopy() => new IonSymbolID(Type, ID!.Value);
             #endregion
         }
         #endregion

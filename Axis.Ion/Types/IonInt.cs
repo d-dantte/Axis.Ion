@@ -1,4 +1,6 @@
-﻿using Axis.Luna.Extensions;
+﻿using Axis.Ion.Numerics;
+using Axis.Luna.Common.Numerics;
+using Axis.Luna.Extensions;
 using System;
 using System.Linq;
 using System.Numerics;
@@ -10,7 +12,7 @@ namespace Axis.Ion.Types
     /// Ion Int.
     /// Note that all encapsulated values are assumed to be signed - including single byte values.
     /// </summary>
-    public readonly struct IonInt : IStructValue<BigInteger>
+    public readonly struct IonInt : IStructValue<BigInteger>, IIonDeepCopyable<IonInt>, INumericType
     {
         private readonly IIonType.Annotation[] _annotations;
 
@@ -45,6 +47,10 @@ namespace Axis.Ion.Types
 
         #endregion
 
+        #region INumericType
+        public BigDecimal? ToBigDecimal() => Value == null ? null : new BigDecimal(Value.Value);
+        #endregion
+
         #region Record Implementation
         public override int GetHashCode()
             => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonType.Annotation, object>()));
@@ -66,6 +72,12 @@ namespace Axis.Ion.Types
 
         public static bool operator !=(IonInt first, IonInt second) => !first.Equals(second);
 
+        #endregion
+
+        #region IIonDeepCopy<>
+        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+
+        public IonInt DeepCopy() => new IonInt(Value, Annotations);
         #endregion
 
         public static implicit operator IonInt(long? value) => new IonInt(value);

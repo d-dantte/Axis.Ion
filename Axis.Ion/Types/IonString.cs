@@ -5,7 +5,7 @@ using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
-    public readonly struct IonString : IRefValue<string>
+    public readonly struct IonString : IRefValue<string>, IIonDeepCopyable<IonString>
     {
         private readonly IIonType.Annotation[] _annotations;
 
@@ -67,6 +67,12 @@ namespace Axis.Ion.Types
 
         public static bool operator !=(IonString first, IonString second) => !first.Equals(second);
 
+        #endregion
+
+        #region IIonDeepCopy<>
+        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+
+        public IonString DeepCopy() => new IonString(Value, Annotations);
         #endregion
 
         public static implicit operator IonString(string? value) => new IonString(value);
