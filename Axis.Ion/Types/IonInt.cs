@@ -12,17 +12,21 @@ namespace Axis.Ion.Types
     /// Ion Int.
     /// Note that all encapsulated values are assumed to be signed - including single byte values.
     /// </summary>
-    public readonly struct IonInt : IStructValue<BigInteger>, IIonDeepCopyable<IonInt>, INumericType
+    public readonly struct IonInt :
+        IStructValue<BigInteger>,
+        IIonDeepCopyable<IonInt>,
+        IIonNullable<IonInt>,
+        INumericType
     {
-        private readonly IIonType.Annotation[] _annotations;
+        private readonly IIonValue.Annotation[] _annotations;
 
         public BigInteger? Value { get; }
 
         public IonTypes Type => IonTypes.Int;
 
-        public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
+        public IIonValue.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonValue.Annotation>();
 
-        public IonInt(BigInteger? value, params IIonType.Annotation[] annotations)
+        public IonInt(BigInteger? value, params IIonValue.Annotation[] annotations)
         {
             Value = value;
             _annotations = annotations
@@ -35,7 +39,7 @@ namespace Axis.Ion.Types
         /// </summary>
         /// <param name="annotations">any available annotation</param>
         /// <returns>The newly created null instance</returns>
-        public static IonInt Null(params IIonType.Annotation[] annotations) => new IonInt(null, annotations);
+        public static IonInt Null(params IIonValue.Annotation[] annotations) => new IonInt(null, annotations);
 
         #region IIonType
 
@@ -53,7 +57,7 @@ namespace Axis.Ion.Types
 
         #region Record Implementation
         public override int GetHashCode()
-            => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonType.Annotation, object>()));
+            => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonValue.Annotation, object>()));
 
         public override bool Equals(object? obj)
         {
@@ -75,7 +79,7 @@ namespace Axis.Ion.Types
         #endregion
 
         #region IIonDeepCopy<>
-        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+        IIonValue IIonDeepCopyable<IIonValue>.DeepCopy() => DeepCopy();
 
         public IonInt DeepCopy() => new IonInt(Value, Annotations);
         #endregion

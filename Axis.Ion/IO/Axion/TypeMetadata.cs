@@ -1,10 +1,12 @@
 ﻿using Axis.Ion.IO.Axion.Payload;
 using Axis.Ion.Types;
 using Axis.Ion.Utils;
+using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using System;
 using System.IO;
 using System.Linq;
+using static Axis.Ion.IO.Axion.Payload.IonSymbolPayload;
 
 namespace Axis.Ion.IO.Axion
 {
@@ -70,11 +72,11 @@ namespace Axis.Ion.IO.Axion
 
         #region metadata
         /// <summary>
-        /// Serializes the metadata of the <see cref="IIonType"/>
+        /// Serializes the metadata of the <see cref="IIonValue"/>
         /// </summary>
         /// <param name="ionType">The ion type</param>
         /// <returns>The metadata byte</returns>
-        public static byte SerializeMetadata(IIonType ionType)
+        public static byte SerializeMetadata(IIonValue ionType)
         {
             byte metadatabyte = (byte)ionType.Type;
 
@@ -111,7 +113,7 @@ namespace Axis.Ion.IO.Axion
         /// <param name="ionType">The ion type</param>
         /// <returns>The serialized annotations</returns>
         public static byte[] SerializeAnnotationData(
-            IIonType ionType,
+            IIonValue ionType,
             SerializerOptions options,
             SymbolHashList symbolTable)
         {
@@ -127,7 +129,10 @@ namespace Axis.Ion.IO.Axion
                     .Select(annotation =>
                     {
                         var symbol = annotation.ToSymbol();
-                        return new IonSymbolPayload(symbolTable.AddOrGetID(symbol));
+
+                        return symbolTable.TryAdd(symbol, out var index)
+                            ? new IonSymbolPayload(symbol)
+                            : new IonSymbolPayload(new IonSymbolID(index));
                     })
                     .ForAll(payload => ITypePayload.Write(memory, payload, options, symbolTable));
 
@@ -137,7 +142,7 @@ namespace Axis.Ion.IO.Axion
             return memory.ToArray();
         }
 
-        public static IIonType.Annotation[] ReadAnnotations(
+        public static IIonValue.Annotation[] ReadAnnotations(
             Stream stream,
             SerializerOptions options,
             SymbolHashList symbolTable)
@@ -154,8 +159,9 @@ namespace Axis.Ion.IO.Axion
 
                     return IonSymbolPayload
                         .Read(stream, metadata, options, symbolTable)
-                        .ApplyTo(payload => payload.IonType.ToIonText())
-                        .ApplyTo(IIonType.Annotation.Parse);
+                        .ApplyTo(payload => payload.IonValue.ToIonText())
+                        .ApplyTo(IIonValue.Annotation.Parse)
+                        .Resolve();
                 })
                 .ToArray();
         }

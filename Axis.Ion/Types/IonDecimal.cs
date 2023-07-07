@@ -7,17 +7,21 @@ using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
-    public readonly struct IonDecimal : IStructValue<decimal>, IIonDeepCopyable<IonDecimal>, INumericType
+    public readonly struct IonPrimitiveDecimal :
+        IStructValue<decimal>,
+        IIonDeepCopyable<IonPrimitiveDecimal>,
+        IIonNullable<IonPrimitiveDecimal>,
+        INumericType
     {
-        private readonly IIonType.Annotation[] _annotations;
+        private readonly IIonValue.Annotation[] _annotations;
 
         public decimal? Value { get; }
 
         public IonTypes Type => IonTypes.Decimal;
 
-        public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
+        public IIonValue.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonValue.Annotation>();
 
-        public IonDecimal(decimal? value, params IIonType.Annotation[] annotations)
+        public IonPrimitiveDecimal(decimal? value, params IIonValue.Annotation[] annotations)
         {
             Value = value;
             _annotations = annotations
@@ -30,7 +34,7 @@ namespace Axis.Ion.Types
         /// </summary>
         /// <param name="annotations">any available annotation</param>
         /// <returns>The newly created null instance</returns>
-        public static IonDecimal Null(params IIonType.Annotation[] annotations) => new IonDecimal(null, annotations);
+        public static IonPrimitiveDecimal Null(params IIonValue.Annotation[] annotations) => new IonPrimitiveDecimal(null, annotations);
 
         #region IIonType
 
@@ -50,7 +54,84 @@ namespace Axis.Ion.Types
 
         #region Record Implementation
         public override int GetHashCode()
-            => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonType.Annotation, object>()));
+            => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonValue.Annotation, object>()));
+
+        public override bool Equals(object? obj)
+        {
+            return obj is IonPrimitiveDecimal other
+                && other.ValueEquals(this)
+                && other.Annotations.SequenceEqual(Annotations);
+        }
+
+        public override string ToString() => Annotations
+            .Select(a => a.ToString())
+            .Concat(ToIonText())
+            .JoinUsing("");
+
+
+        public static bool operator ==(IonPrimitiveDecimal first, IonPrimitiveDecimal second) => first.Equals(second);
+
+        public static bool operator !=(IonPrimitiveDecimal first, IonPrimitiveDecimal second) => !first.Equals(second);
+
+        #endregion
+
+        #region IIonDeepCopy<>
+        IIonValue IIonDeepCopyable<IIonValue>.DeepCopy() => DeepCopy();
+
+        public IonPrimitiveDecimal DeepCopy() => new IonPrimitiveDecimal(Value, Annotations);
+        #endregion
+
+        public static implicit operator IonPrimitiveDecimal(decimal? value) => new IonPrimitiveDecimal(value);
+    }
+
+    public readonly struct IonDecimal :
+        IStructValue<BigDecimal>,
+        IIonDeepCopyable<IonDecimal>,
+        IIonNullable<IonDecimal>,
+        INumericType
+    {
+        private readonly IIonValue.Annotation[] _annotations;
+
+        public BigDecimal? Value { get; }
+
+        public IonTypes Type => IonTypes.Decimal;
+
+        public IIonValue.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonValue.Annotation>();
+
+        public IonDecimal(BigDecimal? value, params IIonValue.Annotation[] annotations)
+        {
+            Value = value;
+            _annotations = annotations
+                .Validate()
+                .ToArray();
+        }
+
+        /// <summary>
+        /// Creates a null instance of the <see cref="IonDecimal"/>
+        /// </summary>
+        /// <param name="annotations">any available annotation</param>
+        /// <returns>The newly created null instance</returns>
+        public static IonDecimal Null(params IIonValue.Annotation[] annotations) => new IonDecimal(null, annotations);
+
+        #region IIonType
+
+        public bool IsNull => Value == null;
+
+        public bool ValueEquals(IStructValue<BigDecimal> other) => Value == other?.Value == true;
+
+        public string ToIonText() => Value is not null
+            ? Value!.Value.ToString().Replace("E","D")
+            : "null.decimal";
+
+        #endregion
+
+        #region INumericType
+        public BigDecimal? ToBigDecimal() => Value;
+        #endregion
+
+        #region Record Implementation
+        public override int GetHashCode()
+            => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonValue.Annotation, object>()));
 
         public override bool Equals(object? obj)
         {
@@ -72,10 +153,12 @@ namespace Axis.Ion.Types
         #endregion
 
         #region IIonDeepCopy<>
-        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+        IIonValue IIonDeepCopyable<IIonValue>.DeepCopy() => DeepCopy();
 
         public IonDecimal DeepCopy() => new IonDecimal(Value, Annotations);
         #endregion
+
+        public static implicit operator IonDecimal(BigDecimal? value) => new IonDecimal(value);
 
         public static implicit operator IonDecimal(decimal? value) => new IonDecimal(value);
     }

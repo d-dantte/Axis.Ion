@@ -5,15 +5,18 @@ using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
-    public readonly struct IonNull : IIonType, IIonDeepCopyable<IonNull>
+    public readonly struct IonNull :
+        IIonValue,
+        IIonDeepCopyable<IonNull>,
+        IIonNullable<IonNull>
     {
-        private readonly IIonType.Annotation[] _annotations;
+        private readonly IIonValue.Annotation[] _annotations;
 
         public IonTypes Type => IonTypes.Null;
 
-        public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
+        public IIonValue.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonValue.Annotation>();
 
-        public IonNull(params IIonType.Annotation[] annotations)
+        public IonNull(params IIonValue.Annotation[] annotations)
         {
             _annotations = annotations
                 .Validate()
@@ -25,7 +28,7 @@ namespace Axis.Ion.Types
         /// </summary>
         /// <param name="annotations">any available annotation</param>
         /// <returns>The newly created null instance</returns>
-        public static IonNull Null(params IIonType.Annotation[] annotations) => new IonNull(annotations);
+        public static IonNull Null(params IIonValue.Annotation[] annotations) => new IonNull(annotations);
 
         #region IIonType
 
@@ -37,7 +40,7 @@ namespace Axis.Ion.Types
 
         #region Record Implementation
         public override int GetHashCode()
-            => HashCode.Combine(ValueHash(Annotations.HardCast<IIonType.Annotation, object>()));
+            => HashCode.Combine(ValueHash(Annotations.HardCast<IIonValue.Annotation, object>()));
 
         public override bool Equals(object? obj)
         {
@@ -58,7 +61,7 @@ namespace Axis.Ion.Types
         #endregion
 
         #region IIonDeepCopy<>
-        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+        IIonValue IIonDeepCopyable<IIonValue>.DeepCopy() => DeepCopy();
 
         public IonNull DeepCopy() => new IonNull(Annotations);
         #endregion

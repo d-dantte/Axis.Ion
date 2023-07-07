@@ -20,7 +20,7 @@ namespace Axis.Ion.IO.Axion.Payload
 
         public IonFloatPayload(IonFloat @float)
         {
-            IonType = @float;
+            IonValue = @float;
             Metadata = SerializeFloatMetadata(@float);
         }
 
@@ -68,11 +68,11 @@ namespace Axis.Ion.IO.Axion.Payload
             // annotations
             var annotations = metadata.HasAnnotations
                 ? TypeMetadata.ReadAnnotations(stream, options, symbolTable)
-                : Array.Empty<IIonType.Annotation>();
+                : Array.Empty<IIonValue.Annotation>();
 
             // null?
             if (metadata.IsNull)
-                return new IonFloatPayload((IonFloat)IIonType.NullOf(metadata.IonType, annotations));
+                return new IonFloatPayload((IonFloat)IIonValue.NullOf(metadata.IonType, annotations));
 
             // non-null
             else
@@ -97,13 +97,13 @@ namespace Axis.Ion.IO.Axion.Payload
 
         public TypeMetadata Metadata { get; }
 
-        public IIonType IonType { get; }
+        public IIonValue IonValue { get; }
 
         public byte[] SerializeData(
             SerializerOptions options,
             SymbolHashList hashList)
         {
-            var ionFloat = (IonFloat)IonType;
+            var ionFloat = (IonFloat)IonValue;
 
             return ionFloat.Value switch
             {

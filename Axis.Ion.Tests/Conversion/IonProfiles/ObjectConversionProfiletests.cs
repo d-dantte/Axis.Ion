@@ -76,7 +76,7 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
 
             ion = profile.ToIon(typeof(Poco1), instance, context);
             var @struct = (IonStruct)ion;
-            Assert.IsFalse(@struct.Properties.Contains(nameof(Poco1.Prop1)));
+            Assert.IsFalse(@struct.ContainsProperty(nameof(Poco1.Prop1)));
 
             // with ignored nulls
             instance = new Poco1(5, null, true, DateTimeOffset.Now);
@@ -86,7 +86,7 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
                 .Build());
             ion = profile.ToIon(typeof(Poco1), instance, context);
             @struct = (IonStruct)ion;
-            Assert.IsFalse(@struct.Properties.Contains(nameof(Poco1.Prop2)));
+            Assert.IsFalse(@struct.ContainsProperty(nameof(Poco1.Prop2)));
 
             // with ignored defaults
             instance = new Poco1(5, "stuff", false, DateTimeOffset.Now);
@@ -96,7 +96,7 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
                 .Build());
             ion = profile.ToIon(typeof(Poco1), instance, context);
             @struct = (IonStruct)ion;
-            Assert.IsFalse(@struct.Properties.Contains(nameof(Poco1.Prop3)));
+            Assert.IsFalse(@struct.ContainsProperty(nameof(Poco1.Prop3)));
         }
 
         [TestMethod]

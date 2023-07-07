@@ -22,7 +22,7 @@ namespace Axis.Ion.IO.Axion.Payload
 
         public IonIntPayload(IonInt @int)
         {
-            IonType = @int;
+            IonValue = @int;
             Metadata = SerializeIntMetadata(@int);
         }
 
@@ -72,11 +72,11 @@ namespace Axis.Ion.IO.Axion.Payload
             // annotations
             var annotations = metadata.HasAnnotations
                 ? TypeMetadata.ReadAnnotations(stream, options, symbolTable)
-                : Array.Empty<IIonType.Annotation>();
+                : Array.Empty<IIonValue.Annotation>();
 
             // null?
             if (metadata.IsNull)
-                return new IonIntPayload((IonInt)IIonType.NullOf(metadata.IonType, annotations));
+                return new IonIntPayload((IonInt)IIonValue.NullOf(metadata.IonType, annotations));
 
             // non-null
             else
@@ -111,16 +111,16 @@ namespace Axis.Ion.IO.Axion.Payload
 
         public TypeMetadata Metadata { get; }
 
-        public IIonType IonType { get; }
+        public IIonValue IonValue { get; }
 
         public byte[] SerializeData(
             SerializerOptions options,
             SymbolHashList hashList)
         {
-            if (IonType.IsNull)
+            if (IonValue.IsNull)
                 return Array.Empty<byte>();
 
-            var ionInt = (IonInt)IonType;
+            var ionInt = (IonInt)IonValue;
 
             return Metadata.CustomMetadata switch
             {

@@ -1,5 +1,7 @@
 ﻿using Axis.Ion.Types;
 using Axis.Ion.Utils;
+using Axis.Luna.Common;
+using Axis.Luna.Common.Results;
 using Axis.Luna.Extensions;
 using System;
 using System.IO;
@@ -27,20 +29,26 @@ namespace Axis.Ion.IO.Axion.Payload
 
         public IonSymbolPayload(IonOperator symbol)
         {
-            IonType = symbol;
+            IonValue = symbol;
             Metadata = SerializeSymbolMetadata(symbol);
         }
 
-        public IonSymbolPayload(IIonTextSymbol symbol)
+        public IonSymbolPayload(IonTextSymbol symbol)
         {
-            if (symbol is IonSymbolID && symbol.IsNull)
+            IonValue = symbol;
+            Metadata = SerializeSymbolMetadata(symbol);
+        }
+
+        public IonSymbolPayload(IonSymbolID sid)
+        {
+            if (sid.IsNull)
                 throw new ArgumentException("Cannot create a payload from a null-symbolID");
 
-            IonType = symbol;
-            Metadata = SerializeSymbolMetadata(symbol);
+            IonValue = sid;
+            Metadata = SerializeSymbolMetadata(sid);
         }
 
-        private static byte SerializeSymbolMetadata(IIonType type)
+        private static byte SerializeSymbolMetadata(IIonValue type)
         {
             var metadata = TypeMetadata.SerializeMetadata(type);
 
@@ -53,7 +61,7 @@ namespace Axis.Ion.IO.Axion.Payload
                     2 => Int16IDMask << 6,
                     > 2 => IntUnlimitedIDMask << 6,
 
-                    // note that  (for now) null symbol ids (id.IsNull) are not allowed.
+                    // note that (for now) null symbol ids (id.IsNull) are not allowed.
                     0 => throw new InvalidOperationException("null symbol ids are not allowed"),
                     _ => throw new InvalidOperationException($"Invalid id byte count: {id.ID?.GetByteCount() ?? 0}")
                 },
@@ -70,14 +78,12 @@ namespace Axis.Ion.IO.Axion.Payload
                 },
 
                 // text symbol
-                IIonTextSymbol => 0,
+                IonTextSymbol => 0,
 
                 // unknown symbol types
                 _ => throw new InvalidOperationException($"Invalid ion-type: {type.GetType()}")
             };
         }
-
-        private static bool IsQuotedSymbol(TypeMetadata metadata) => metadata.IonType == IonTypes.QuotedSymbol;
 
         #region Read
         public static bool TryRead(
@@ -106,24 +112,22 @@ namespace Axis.Ion.IO.Axion.Payload
             SymbolHashList symbolTable)
         {
             if (metadata.IonType != IonTypes.OperatorSymbol
-                && metadata.IonType != IonTypes.IdentifierSymbol
-                && metadata.IonType != IonTypes.QuotedSymbol)
+                && metadata.IonType != IonTypes.TextSymbol)
                 throw new ArgumentException($"Invalid symbol type-metadata: {metadata.IonType}.");
 
             // annotations
             var annotations = metadata.HasAnnotations
                 ? TypeMetadata.ReadAnnotations(stream, options, symbolTable)
-                : Array.Empty<IIonType.Annotation>();
+                : Array.Empty<IIonValue.Annotation>();
 
             // null?
             if (metadata.IsNull)
             {
-                var nullSymbol = IIonType.NullOf(metadata.IonType, annotations);
+                var nullSymbol = IIonValue.NullOf(metadata.IonType, annotations);
                 return metadata.IonType switch
                 {
                     IonTypes.OperatorSymbol => new IonSymbolPayload((IonOperator)nullSymbol),
-                    IonTypes.IdentifierSymbol => new IonSymbolPayload((IonIdentifier)nullSymbol),
-                    IonTypes.QuotedSymbol => new IonSymbolPayload((IonQuotedSymbol)nullSymbol),
+                    IonTypes.TextSymbol => new IonSymbolPayload((IonTextSymbol)nullSymbol),
                     _ => throw new InvalidOperationException($"Invalid symbol metadata type: {metadata.IonType}")
                 };
             }
@@ -161,25 +165,30 @@ namespace Axis.Ion.IO.Axion.Payload
                             ? throw new EndOfStreamException()
                             : !stream.TryReadExactBytes(2 * textCount.CastToInt(), out var bytes)
                                 ? throw new EndOfStreamException()
-                                : new IonSymbolPayload(
-                                    // this SHOULD always be the first time adding the symbol to the table
-                                    symbolTable.AddOrGetID(
-                                        IIonTextSymbol.Parse(
-                                            Encoding.Unicode.GetString(bytes).WrapIf(_ => IsQuotedSymbol(metadata), "'"),
-                                            annotations))),
+                                // this SHOULD always be the first time adding the symbol to the table
+                                : IonTextSymbol
+                                    .Parse(Encoding.Unicode.GetString(bytes), annotations)
+                                    .Map(symbol => symbolTable.TryAdd(symbol, out var index)
+                                        ? new IonSymbolPayload(symbol)
+                                        : new IonSymbolPayload(new IonSymbolID(index)))
+                                    .Resolve(),
 
                         // IDs
                         1 or 2 => !stream.TryReadExactBytes(metadata.CustomMetadata, out var bytes)
                             ? throw new EndOfStreamException()
                             : !symbolTable.TryGetSymbol(new BigInteger(bytes).CastToInt(), out var symbol)
                                 ? throw new InvalidOperationException($"symbol ID not found in symbol table: {new BigInteger(bytes)}")
-                                : new IonSymbolPayload(IIonTextSymbol.Parse(symbol.ToIonText(), annotations)),
+                                : new IonSymbolPayload(IonTextSymbol
+                                    .Parse(symbol.ToIonText(), annotations)
+                                    .Resolve()),
 
                         3 => !stream.TryReadVarByteInteger(out var id)
                             ? throw new EndOfStreamException()
                             : !symbolTable.TryGetSymbol(id.CastToInt(), out var symbol)
                                 ? throw new InvalidOperationException($"symbol ID not found in symbol table: {id}")
-                                : new IonSymbolPayload(IIonTextSymbol.Parse(symbol.ToIonText(), annotations)),
+                                : new IonSymbolPayload(IonTextSymbol
+                                    .Parse(symbol.ToIonText(), annotations)
+                                    .Resolve()),
 
                         _ => throw new InvalidOperationException($"Invalid custom data: {metadata.CustomMetadata}")
                     }
@@ -192,16 +201,16 @@ namespace Axis.Ion.IO.Axion.Payload
 
         public TypeMetadata Metadata { get; }
 
-        public IIonType IonType { get; }
+        public IIonValue IonValue { get; }
 
         public byte[] SerializeData(
             SerializerOptions options,
             SymbolHashList hashList)
         {
-            if (IonType.IsNull)
+            if (IonValue.IsNull)
                 return Array.Empty<byte>();
 
-            return IonType switch
+            return IonValue switch
             {
                 // id
                 IonSymbolID id => Metadata.CustomMetadata switch
@@ -234,40 +243,41 @@ namespace Axis.Ion.IO.Axion.Payload
                 },
 
                 // IonTextSymbol
-                IIonTextSymbol text => (text.Value?.Length ?? 0)
+                IonTextSymbol text => (text.Value?.Length ?? 0)
                     .ToVarBytes() // storing text length, not byte length
                     .Concat(Encoding.Unicode.GetBytes(text.Value ?? ""))
                     .ToArray(),
 
                 // unknown symbol type
-                _ => throw new InvalidOperationException($"Invalid ion-type: {IonType.GetType()}")
+                _ => throw new InvalidOperationException($"Invalid ion-type: {IonValue.GetType()}")
             };
         }
 
         #endregion
 
         #region Nested types
-        public readonly struct IonSymbolID : IIonTextSymbol, IIonDeepCopyable<IonSymbolID>
+        public readonly struct IonSymbolID :
+        IRefValue<string>,
+        IIonDeepCopyable<IonSymbolID>
         {
             public BigInteger? ID { get; }
 
-            public IonSymbolID(IonTypes type, BigInteger id)
+            public IonSymbolID(BigInteger id)
             {
                 if (id < 0)
                     throw new ArgumentException("ID cannot be less than 0");
 
                 ID = id;
-                Type = type;
             }
 
             #region IIonTextSymbol
             public string? Value => ID?.ToString();
 
-            public IonTypes Type { get; }
+            public IonTypes Type => IonTypes.TextSymbol;
 
             public bool IsNull => ID is null;
 
-            public IIonType.Annotation[] Annotations => Array.Empty<IIonType.Annotation>();
+            public IIonValue.Annotation[] Annotations => Array.Empty<IIonValue.Annotation>();
 
             public string ToIonText() => ToString();
 
@@ -293,9 +303,9 @@ namespace Axis.Ion.IO.Axion.Payload
             #endregion
 
             #region IIonDeepCopy<>
-            IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+            IIonValue IIonDeepCopyable<IIonValue>.DeepCopy() => DeepCopy();
 
-            public IonSymbolID DeepCopy() => new IonSymbolID(Type, ID!.Value);
+            public IonSymbolID DeepCopy() => new IonSymbolID(ID!.Value);
             #endregion
         }
         #endregion

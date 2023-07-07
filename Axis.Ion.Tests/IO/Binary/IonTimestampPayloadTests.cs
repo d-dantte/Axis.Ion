@@ -2,6 +2,7 @@
 using Axis.Ion.IO.Axion.Payload;
 using Axis.Ion.Types;
 using Axis.Ion.Utils;
+using Axis.Luna.Common.Results;
 
 namespace Axis.Ion.Tests.IO.Binary
 {
@@ -117,7 +118,7 @@ namespace Axis.Ion.Tests.IO.Binary
                 options,
                 new SymbolHashList());
 
-            Assert.AreEqual(default(IonTimestamp), payload2.IonType);
+            Assert.AreEqual(default(IonTimestamp), payload2.IonValue);
             #endregion
 
             #region year + month
@@ -140,7 +141,7 @@ namespace Axis.Ion.Tests.IO.Binary
                 TypeMetadata.ReadMetadata(memory),
                 options,
                 new SymbolHashList());
-            Assert.AreEqual(ionValue, payload2.IonType);
+            Assert.AreEqual(ionValue, payload2.IonValue);
             #endregion
 
             #region year + month + day
@@ -163,7 +164,7 @@ namespace Axis.Ion.Tests.IO.Binary
                 TypeMetadata.ReadMetadata(memory),
                 options,
                 new SymbolHashList());
-            Assert.AreEqual(ionValue, payload2.IonType);
+            Assert.AreEqual(ionValue, payload2.IonValue);
             #endregion
 
             #region year + month + day + hms
@@ -186,7 +187,7 @@ namespace Axis.Ion.Tests.IO.Binary
                 TypeMetadata.ReadMetadata(memory),
                 options,
                 new SymbolHashList());
-            Assert.AreEqual(ionValue, payload2.IonType);
+            Assert.AreEqual(ionValue, payload2.IonValue);
             #endregion
 
             #region year + month + day + hms + ticks
@@ -210,7 +211,7 @@ namespace Axis.Ion.Tests.IO.Binary
                 TypeMetadata.ReadMetadata(memory),
                 options,
                 new SymbolHashList());
-            Assert.AreEqual(ionValue, payload2.IonType);
+            Assert.AreEqual(ionValue, payload2.IonValue);
             #endregion
         }
     }

@@ -14,7 +14,7 @@ namespace Axis.Ion.Conversion
         /// <param name="destinationType"></param>
         /// <param name="ion"></param>
         /// <returns></returns>
-        bool CanConvert(Type destinationType, IIonType ion);
+        bool CanConvert(Type destinationType, IIonValue ion);
 
         /// <summary>
         /// 
@@ -23,6 +23,6 @@ namespace Axis.Ion.Conversion
         /// <param name="ion"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-        object? ToClr(Type destinationType, IIonType ion, ConversionContext context);
+        object? ToClr(Type destinationType, IIonValue ion, ConversionContext context);
     }
 }

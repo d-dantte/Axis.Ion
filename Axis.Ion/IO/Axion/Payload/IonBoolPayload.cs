@@ -15,7 +15,7 @@ namespace Axis.Ion.IO.Axion.Payload
 
         public IonBoolPayload(IonBool @bool)
         {
-            IonType = @bool;
+            IonValue = @bool;
             Metadata = ToBoolTypeMetadata(@bool);
         }
 
@@ -66,11 +66,11 @@ namespace Axis.Ion.IO.Axion.Payload
             // annotations
             var annotations = metadata.HasAnnotations
                 ? TypeMetadata.ReadAnnotations(stream, options, symbolTable)
-                : Array.Empty<IIonType.Annotation>();
+                : Array.Empty<IIonValue.Annotation>();
 
             if (metadata.IsNull)
                 return new IonBoolPayload(
-                    (IonBool)IIonType.NullOf(IonTypes.Bool, annotations));
+                    (IonBool)IIonValue.NullOf(IonTypes.Bool, annotations));
 
             return new IonBoolPayload(metadata.CustomMetadata switch
             {
@@ -85,7 +85,7 @@ namespace Axis.Ion.IO.Axion.Payload
 
         public TypeMetadata Metadata { get; }
 
-        public IIonType IonType { get; }
+        public IIonValue IonValue { get; }
 
         public byte[] SerializeData(
             SerializerOptions options,

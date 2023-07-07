@@ -15,7 +15,7 @@ namespace Axis.Ion.IO.Axion.Payload
 
         public IonTimestampPayload(IonTimestamp timestamp)
         {
-            IonType = timestamp;
+            IonValue = timestamp;
             Metadata = TypeMetadata.SerializeMetadata(timestamp);
         }
 
@@ -51,11 +51,11 @@ namespace Axis.Ion.IO.Axion.Payload
             // annotations
             var annotations = metadata.HasAnnotations
                 ? TypeMetadata.ReadAnnotations(stream, options, symbolTable)
-                : Array.Empty<IIonType.Annotation>();
+                : Array.Empty<IIonValue.Annotation>();
 
             // null?
             if (metadata.IsNull)
-                return new IonTimestampPayload((IonTimestamp)IIonType.NullOf(metadata.IonType, annotations));
+                return new IonTimestampPayload((IonTimestamp)IIonValue.NullOf(metadata.IonType, annotations));
 
             // non-null
             else
@@ -128,13 +128,13 @@ namespace Axis.Ion.IO.Axion.Payload
 
         public TypeMetadata Metadata { get; }
 
-        public IIonType IonType { get; }
+        public IIonValue IonValue { get; }
 
         public byte[] SerializeData(
             SerializerOptions options,
             SymbolHashList hashList)
         {
-            var ionTimestamp = (IonTimestamp)IonType;
+            var ionTimestamp = (IonTimestamp)IonValue;
 
             if (ionTimestamp.IsNull)
                 return Array.Empty<byte>();

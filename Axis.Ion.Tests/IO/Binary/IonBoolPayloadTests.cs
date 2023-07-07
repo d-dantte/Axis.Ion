@@ -2,6 +2,7 @@
 using Axis.Ion.IO.Axion.Payload;
 using Axis.Ion.Types;
 using Axis.Ion.Utils;
+using Axis.Luna.Common.Results;
 
 namespace Axis.Ion.Tests.IO.Binary
 {
@@ -24,9 +25,9 @@ namespace Axis.Ion.Tests.IO.Binary
             // annotations
             memory = new MemoryStream();
             payload = new IonBoolPayload(
-                (IonBool)IIonType.NullOf(
+                (IonBool)IIonValue.NullOf(
                     IonTypes.Bool,
-                    IIonType.Annotation.ParseCollection("abc::'xyz'")));
+                    IIonValue.Annotation.ParseCollection("abc::'xyz'").Resolve()));
             ITypePayload.Write(memory, payload, options, new SymbolHashList());
             memoryArray = memory.ToArray();
             Assert.AreEqual(18, memoryArray.Length);
@@ -46,7 +47,7 @@ namespace Axis.Ion.Tests.IO.Binary
             payload = new IonBoolPayload(
                 new IonBool(
                     true,
-                    IIonType.Annotation.ParseCollection("abc::'xyz'")));
+                    IIonValue.Annotation.ParseCollection("abc::'xyz'").Resolve()));
             ITypePayload.Write(memory, payload, options, new SymbolHashList());
             memoryArray = memory.ToArray();
             Assert.AreEqual(18, memoryArray.Length);
@@ -66,7 +67,7 @@ namespace Axis.Ion.Tests.IO.Binary
             payload = new IonBoolPayload(
                 new IonBool(
                     false,
-                    IIonType.Annotation.ParseCollection("abc::'xyz'")));
+                    IIonValue.Annotation.ParseCollection("abc::'xyz'").Resolve()));
             ITypePayload.Write(memory, payload, options, new SymbolHashList());
             memoryArray = memory.ToArray();
             Assert.AreEqual(18, memoryArray.Length);
@@ -89,12 +90,12 @@ namespace Axis.Ion.Tests.IO.Binary
                 TypeMetadata.ReadMetadata(memory),
                 options,
                  new SymbolHashList());
-            Assert.AreEqual(default(IonBool), payload2.IonType);
+            Assert.AreEqual(default(IonBool), payload2.IonValue);
 
             // annotations
-            var ionValue = (IonBool)IIonType.NullOf(
+            var ionValue = (IonBool)IIonValue.NullOf(
                 IonTypes.Bool,
-                IIonType.Annotation.ParseCollection("abc::'xyz'"));
+                IIonValue.Annotation.ParseCollection("abc::'xyz'").Resolve());
             memory = new MemoryStream();
             payload = new IonBoolPayload(ionValue);
             ITypePayload.Write(memory, payload, options,  new SymbolHashList());
@@ -104,7 +105,7 @@ namespace Axis.Ion.Tests.IO.Binary
                 TypeMetadata.ReadMetadata(memory),
                 options,
                  new SymbolHashList());
-            Assert.AreEqual(ionValue, payload2.IonType);
+            Assert.AreEqual(ionValue, payload2.IonValue);
             #endregion
 
             #region true
@@ -118,12 +119,12 @@ namespace Axis.Ion.Tests.IO.Binary
                 TypeMetadata.ReadMetadata(memory),
                 options,
                  new SymbolHashList());
-            Assert.AreEqual(ionValue, payload2.IonType);
+            Assert.AreEqual(ionValue, payload2.IonValue);
 
             // annotations
             ionValue = new IonBool(
                 true,
-                IIonType.Annotation.ParseCollection("abc::'xyz'"));
+                IIonValue.Annotation.ParseCollection("abc::'xyz'").Resolve());
             memory = new MemoryStream();
             payload = new IonBoolPayload(ionValue);
             ITypePayload.Write(memory, payload, options,  new SymbolHashList());
@@ -133,7 +134,7 @@ namespace Axis.Ion.Tests.IO.Binary
                 TypeMetadata.ReadMetadata(memory),
                 options,
                  new SymbolHashList());
-            Assert.AreEqual(ionValue, payload2.IonType);
+            Assert.AreEqual(ionValue, payload2.IonValue);
             #endregion
 
             #region false
@@ -147,12 +148,12 @@ namespace Axis.Ion.Tests.IO.Binary
                 TypeMetadata.ReadMetadata(memory),
                 options,
                  new SymbolHashList());
-            Assert.AreEqual(ionValue, payload2.IonType);
+            Assert.AreEqual(ionValue, payload2.IonValue);
 
             // annotations
             ionValue = new IonBool(
                 false,
-                IIonType.Annotation.ParseCollection("abc::'xyz'"));
+                IIonValue.Annotation.ParseCollection("abc::'xyz'").Resolve());
             memory = new MemoryStream();
             payload = new IonBoolPayload(ionValue);
             ITypePayload.Write(memory, payload, options,  new SymbolHashList());
@@ -162,7 +163,7 @@ namespace Axis.Ion.Tests.IO.Binary
                 TypeMetadata.ReadMetadata(memory),
                 options,
                  new SymbolHashList());
-            Assert.AreEqual(ionValue, payload2.IonType);
+            Assert.AreEqual(ionValue, payload2.IonValue);
             #endregion
         }
     }

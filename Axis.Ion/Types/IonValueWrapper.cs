@@ -7,7 +7,7 @@ namespace Axis.Ion.Types
     /// <summary>
     /// PS: this struct should NEVER accept null IIonTypes. If the intent is to pass an IonNull, it should be deliberate
     /// <para>
-    /// Note that <see cref="IIonType"/>s that have no direct conversion to c# primitive types will not have implicit conversions
+    /// Note that <see cref="IIonValue"/>s that have no direct conversion to c# primitive types will not have implicit conversions
     /// to this wrapper. To use them with the wrapper, do the following
     /// <code>
     /// IonValueWrapper w = IIonType.Of(xxx).Wrap();
@@ -22,9 +22,9 @@ namespace Axis.Ion.Types
     /// </summary>
     public readonly struct IonValueWrapper
     {
-        public IIonType Value { get; }
+        public IIonValue Value { get; }
 
-        public IonValueWrapper(IIonType value)
+        public IonValueWrapper(IIonValue value)
         {
             Value = value.ThrowIfNull(new ArgumentNullException(nameof(value)));
         }
@@ -84,10 +84,7 @@ namespace Axis.Ion.Types
         public static implicit operator IonValueWrapper(IonString value)
             => new IonValueWrapper(value);
 
-        public static implicit operator IonValueWrapper(IonQuotedSymbol value)
-            => new IonValueWrapper(value);
-
-        public static implicit operator IonValueWrapper(IonIdentifier value)
+        public static implicit operator IonValueWrapper(IonTextSymbol value)
             => new IonValueWrapper(value);
 
         public static implicit operator IonValueWrapper(IonOperator value)

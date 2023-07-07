@@ -7,17 +7,21 @@ using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
-    public readonly struct IonFloat : IStructValue<double>, IIonDeepCopyable<IonFloat>, INumericType
+    public readonly struct IonFloat :
+        IStructValue<double>,
+        IIonDeepCopyable<IonFloat>,
+        IIonNullable<IonFloat>,
+        INumericType
     {
-        private readonly IIonType.Annotation[] _annotations;
+        private readonly IIonValue.Annotation[] _annotations;
 
         public double? Value { get; }
 
         public IonTypes Type => IonTypes.Float;
 
-        public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
+        public IIonValue.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonValue.Annotation>();
 
-        public IonFloat(double? value, params IIonType.Annotation[] annotations)
+        public IonFloat(double? value, params IIonValue.Annotation[] annotations)
         {
             Value = value;
             _annotations = annotations
@@ -30,7 +34,7 @@ namespace Axis.Ion.Types
         /// </summary>
         /// <param name="annotations">any available annotation</param>
         /// <returns>The newly created null instance</returns>
-        public static IonFloat Null(params IIonType.Annotation[] annotations) => new IonFloat(null, annotations);
+        public static IonFloat Null(params IIonValue.Annotation[] annotations) => new IonFloat(null, annotations);
 
         #region IIonType
 
@@ -55,7 +59,7 @@ namespace Axis.Ion.Types
 
         #region Record Implementation
         public override int GetHashCode()
-            => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonType.Annotation, object>()));
+            => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonValue.Annotation, object>()));
 
         public override bool Equals(object? obj)
         {
@@ -77,7 +81,7 @@ namespace Axis.Ion.Types
         #endregion
 
         #region IIonDeepCopy<>
-        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+        IIonValue IIonDeepCopyable<IIonValue>.DeepCopy() => DeepCopy();
 
         public IonFloat DeepCopy() => new IonFloat(Value, Annotations);
         #endregion

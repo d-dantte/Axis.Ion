@@ -18,7 +18,7 @@ namespace Axis.Ion.Conversion.Converters
         private static readonly ConcurrentDictionary<Type, MapReflectionInfo> ReflectionInfoMap = new();
 
         #region IClrConverter
-        public bool CanConvert(Type destinationType, IIonType ion)
+        public bool CanConvert(Type destinationType, IIonValue ion)
         {
             if (destinationType is null)
                 throw new ArgumentNullException(nameof(destinationType));
@@ -31,9 +31,9 @@ namespace Axis.Ion.Conversion.Converters
                 && TypeCategory.Map == CategoryOf(destinationType);
         }
 
-        public object? ToClr(Type type, IIonType ion, ConversionContext context) => ToClr(type, ion, null, context);
+        public object? ToClr(Type type, IIonValue ion, ConversionContext context) => ToClr(type, ion, null, context);
 
-        internal object? ToClr(Type type, IIonType ion, object? map, ConversionContext context)
+        internal object? ToClr(Type type, IIonValue ion, object? map, ConversionContext context)
         {
             if (type is null)
                 throw new ArgumentNullException(nameof(type));
@@ -57,7 +57,7 @@ namespace Axis.Ion.Conversion.Converters
             {
                 var clrType = CompatibleClrType(property.Value.Type, mapItemType);
                 var value = property.Value.ToClrObject(clrType, context);
-                reflectionInfo.SetValue.Invoke(map, new[] { property.NameText, value });
+                reflectionInfo.SetValue.Invoke(map, new[] { property.Name.Value!, value });
             }
 
             return map;
@@ -75,7 +75,7 @@ namespace Axis.Ion.Conversion.Converters
                 && TypeCategory.Map == CategoryOf(instance?.GetType() ?? sourceType);
         }
 
-        public IIonType ToIon(Type sourceType, object? instance, ConversionContext context)
+        public IIonValue ToIon(Type sourceType, object? instance, ConversionContext context)
         {
             if (sourceType is null)
                 throw new ArgumentNullException(nameof(sourceType));
@@ -88,14 +88,13 @@ namespace Axis.Ion.Conversion.Converters
             var ion = IonStruct.Empty();
             var mapItemType = MapItemTypeOf(sourceType);
             var reflectionInfo = ReflectionInfoMap.GetOrAdd(mapItemType, ReflectionInfoFor);
-            var props = ion.Properties;
             var keys = (IEnumerable<string>)reflectionInfo.Keys.Invoke(instance);
 
             foreach (var key in keys)
             {
                 var value = reflectionInfo.GetValue.Invoke(instance, new[] { key });
-                props[key] = value is TypedNull typedNull
-                    ? IIonType.NullOf(typedNull.IonType)
+                ion[key] = value is TypedNull typedNull
+                    ? IIonValue.NullOf(typedNull.IonType)
                     : value.ToIonValue(value?.GetType() ?? mapItemType, context);
             }
 

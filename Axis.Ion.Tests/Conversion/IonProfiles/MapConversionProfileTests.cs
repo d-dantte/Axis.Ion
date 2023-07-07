@@ -82,23 +82,24 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
             };
 
             var ion = profile.ToIon(dictionary.GetType(), dictionary, context);
+            var @struct = ion as IonStruct;
             Assert.IsNotNull(ion);
-            Assert.IsTrue(ion is IonStruct @struct);
+            Assert.IsNotNull(@struct);
 
-            Assert.IsTrue(@struct.Properties.Contains("stuff"));
-            Assert.AreEqual(IonTypes.Int, @struct.Properties["stuff"].Type);
+            Assert.IsTrue(@struct.ContainsProperty("stuff"));
+            Assert.AreEqual(IonTypes.Int, @struct["stuff"].Type);
 
-            Assert.IsTrue(@struct.Properties.Contains("another stuff"));
-            Assert.AreEqual(IonTypes.String, @struct.Properties["another stuff"].Type);
+            Assert.IsTrue(@struct.ContainsProperty("another stuff"));
+            Assert.AreEqual(IonTypes.String, @struct["another stuff"].Type);
 
-            Assert.IsTrue(@struct.Properties.Contains("decimal-prop"));
-            Assert.AreEqual(IonTypes.Decimal, @struct.Properties["decimal-prop"].Type);
+            Assert.IsTrue(@struct.ContainsProperty("decimal-prop"));
+            Assert.AreEqual(IonTypes.Decimal, @struct["decimal-prop"].Type);
 
-            Assert.IsTrue(@struct.Properties.Contains("bleh"));
-            Assert.AreEqual(IonTypes.IdentifierSymbol, @struct.Properties["bleh"].Type);
+            Assert.IsTrue(@struct.ContainsProperty("bleh"));
+            Assert.AreEqual(IonTypes.TextSymbol, @struct["bleh"].Type);
 
-            Assert.IsTrue(@struct.Properties.Contains("the time stamp"));
-            Assert.AreEqual(IonTypes.Timestamp, @struct.Properties["the time stamp"].Type);
+            Assert.IsTrue(@struct.ContainsProperty("the time stamp"));
+            Assert.AreEqual(IonTypes.Timestamp, @struct["the time stamp"].Type);
 
             Assert.IsTrue(profile.ToIon(dictionary.GetType(), null, context).IsNull);
             Assert.ThrowsException<ArgumentNullException>(() => profile.ToIon(null, dictionary, context));
@@ -114,7 +115,7 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
                 ["stuff"] = 4,
                 ["another stuff"] = "the answer",
                 ["decimal-prop"] = 5.4m,
-                ["bleh"] = new IonIdentifier(IonTypes.Timestamp.ToString()),
+                ["bleh"] = new IonTextSymbol(IonTypes.Timestamp.ToString()),
                 ["the time stamp"] = dt
             };
             var ionStruct = new IonStruct(init);

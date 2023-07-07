@@ -9,7 +9,7 @@ namespace Axis.Ion.Conversion.Converters
     internal class EnumConverter : IConverter
     {
         #region IClrConverter
-        public bool CanConvert(Type destinationType, IIonType ion)
+        public bool CanConvert(Type destinationType, IIonValue ion)
         {
             if (destinationType is null)
                 throw new ArgumentNullException(nameof(destinationType));
@@ -18,26 +18,20 @@ namespace Axis.Ion.Conversion.Converters
                 throw new ArgumentNullException(nameof(ion));
 
             return destinationType.IsEnum
-                && IonTypes.IdentifierSymbol == ion.Type;
+                && ion is IonTextSymbol symbol
+                && symbol.IsIdentifier;
         }
 
-        public object? ToClr(Type destinationType, IIonType ion, ConversionContext context)
+        public object? ToClr(Type destinationType, IIonValue ion, ConversionContext context)
         {
             if (destinationType is null)
                 throw new ArgumentNullException(nameof(destinationType));
 
-            var value = ion switch
-            {
-                IonString @string => @string.Value,
-                IonIdentifier identifier => identifier.Value,
-                IonQuotedSymbol quoted => quoted.Value,
-                _ => throw new ArgumentException($"Invalid ion type: {ion?.Type}")
-            };
+            var value = ((IonTextSymbol)ion).Value;
 
-            if (value is null)
-                throw new ArgumentException("Invalid ion: cannot convert null to enum");
-
-            return Enum.Parse(destinationType, value);
+            return value is null
+                ? throw new ArgumentException("Invalid ion: cannot convert null to enum")
+                : Enum.Parse(destinationType, value);
         }
         #endregion
 
@@ -50,15 +44,15 @@ namespace Axis.Ion.Conversion.Converters
             return (instance?.GetType() ?? sourceType).IsEnum;
         }
 
-        public IIonType ToIon(Type sourceType, object? instance, ConversionContext options)
+        public IIonValue ToIon(Type sourceType, object? instance, ConversionContext options)
         {
             if (instance is null)
-                return IIonType.NullOf(IonTypes.IdentifierSymbol);
+                return IIonValue.NullOf(IonTypes.TextSymbol);
 
             if (!instance.GetType().IsEnum)
                 throw new ArgumentException($"Supplied {nameof(instance)} is not an enum");
 
-            return new IonIdentifier(instance.ToString());
+            return new IonTextSymbol(instance.ToString());
         }
         #endregion
     }

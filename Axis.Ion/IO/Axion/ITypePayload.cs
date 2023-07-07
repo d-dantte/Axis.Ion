@@ -36,7 +36,7 @@ namespace Axis.Ion.IO.Axion
         /// <summary>
         /// The ion value
         /// </summary>
-        IIonType IonType { get; }
+        IIonValue IonValue { get; }
 
         /// <summary>
         /// Serializes the data-component of the payload.
@@ -59,7 +59,7 @@ namespace Axis.Ion.IO.Axion
             SerializerOptions options,
             SymbolHashList symbolTable)
         {
-            var annotations = TypeMetadata.SerializeAnnotationData(payload.IonType, options, symbolTable);
+            var annotations = TypeMetadata.SerializeAnnotationData(payload.IonValue, options, symbolTable);
             outputStream.WriteByte(payload.Metadata.Metadata);
             outputStream.Write(annotations);
             outputStream.Write(payload.SerializeData(options, symbolTable));
@@ -80,7 +80,7 @@ namespace Axis.Ion.IO.Axion
             SerializerOptions options,
             SymbolHashList symbolTable)
         {
-            var annotations = TypeMetadata.SerializeAnnotationData(payload.IonType, options, symbolTable);
+            var annotations = TypeMetadata.SerializeAnnotationData(payload.IonValue, options, symbolTable);
             outputStream.WriteByte(payload.Metadata.Metadata);
             await outputStream.WriteAsync(annotations);
             await outputStream.WriteAsync(payload.SerializeData(options, symbolTable));
@@ -92,7 +92,7 @@ namespace Axis.Ion.IO.Axion
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
-        public static ITypePayload Of(IIonType type)
+        public static ITypePayload Of(IIonValue type)
         {
             return type.Type switch
             {
@@ -122,9 +122,7 @@ namespace Axis.Ion.IO.Axion
 
                 IonTypes.OperatorSymbol => new IonSymbolPayload((IonOperator)type),
 
-                IonTypes.IdentifierSymbol => new IonSymbolPayload((IonIdentifier)type),
-
-                IonTypes.QuotedSymbol => new IonSymbolPayload((IonQuotedSymbol)type),
+                IonTypes.TextSymbol => new IonSymbolPayload((IonTextSymbol)type),
 
                 _ => throw new InvalidOperationException($"Invalid ion-type: {type.Type}")
             };

@@ -8,16 +8,16 @@ namespace Axis.Ion.IO
 {
     public readonly struct IonPacket
     {
-        private readonly IIonType[] ionValues;
+        private readonly IIonValue[] ionValues;
 
-        public IonPacket(params IIonType[] ionValues)
+        public IonPacket(params IIonValue[] ionValues)
         {
             this.ionValues = ionValues
                 .ThrowIfNull(new ArgumentNullException(nameof(ionValues)))
                 .ToArray();
         }
 
-        public IonPacket(IEnumerable<IIonType> ionValues)
+        public IonPacket(IEnumerable<IIonValue> ionValues)
         : this(ionValues?.ToArray() ?? throw new ArgumentNullException(nameof(ionValues)))
         { }
 
@@ -29,6 +29,6 @@ namespace Axis.Ion.IO
         /// <summary>
         /// Gets an array of the elements in the packet
         /// </summary>
-        public IIonType[] IonValues => ionValues.ToArray();
+        public IIonValue[] IonValues => ionValues.ToArray();
     }
 }

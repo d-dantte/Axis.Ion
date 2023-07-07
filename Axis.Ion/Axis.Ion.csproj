@@ -29,11 +29,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Axis.Luna.Common" Version="6.0.8-alpha-20230528-01" />
-    <PackageReference Include="Axis.Luna.Extensions" Version="6.0.6" />
+    <PackageReference Include="Axis.Luna.Common" Version="6.0.8-alpha-20230609-03" />
+    <PackageReference Include="Axis.Luna.Extensions" Version="6.0.9" />
     <PackageReference Include="Axis.Luna.FInvoke" Version="6.0.6" />
-    <PackageReference Include="Axis.Pulsar.Grammar" Version="0.7.7" />
-    <PackageReference Include="Axis.Pulsar.Languages" Version="0.7.7" />
+    <PackageReference Include="Axis.Pulsar.Grammar" Version="0.7.15" />
+    <PackageReference Include="Axis.Pulsar.Languages" Version="0.7.11" />
   </ItemGroup>
 
   <ItemGroup>

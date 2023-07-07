@@ -20,7 +20,7 @@ namespace Axis.Ion.Conversion
             //new ComplexCollectionProfile()
         };
 
-        public static IIonType ToIon<T>(T value, ConversionOptions? options = null)
+        public static IIonValue ToIon<T>(T value, ConversionOptions? options = null)
         {
             if (value is null)
                 return new IonNull();
@@ -28,7 +28,7 @@ namespace Axis.Ion.Conversion
             return ToIon(typeof(T), value, options);
         }
 
-        public static T? ToClr<T>(IIonType ion, ConversionOptions? options = null)
+        public static T? ToClr<T>(IIonValue ion, ConversionOptions? options = null)
         {
             if (ion is null)
                 throw new ArgumentNullException(nameof(ion));
@@ -41,17 +41,17 @@ namespace Axis.Ion.Conversion
             return (T)obj;
         }
 
-        public static IIonType ToIon(Type sourceType, object? value, ConversionOptions? options = null)
+        public static IIonValue ToIon(Type sourceType, object? value, ConversionOptions? options = null)
         {
             return ToIon(sourceType, value, new ConversionContext(options ?? new ConversionOptions()));
         }
 
-        public static object? ToClr(Type destinationType, IIonType ion, ConversionOptions? options = null)
+        public static object? ToClr(Type destinationType, IIonValue ion, ConversionOptions? options = null)
         {
             return ToClr(destinationType, ion, new ConversionContext(options ?? new ConversionOptions()));
         }
 
-        internal static IIonType ToIon(Type sourceType, object? instance, ConversionContext context)
+        internal static IIonValue ToIon(Type sourceType, object? instance, ConversionContext context)
         {
             sourceType.ValidateCongruenceWith(instance?.GetType());
 
@@ -70,7 +70,7 @@ namespace Axis.Ion.Conversion
             return converter.ToIon(sourceType, instance, context.Next());
         }
 
-        internal static object? ToClr(Type destinationType, IIonType ion, ConversionContext context)
+        internal static object? ToClr(Type destinationType, IIonValue ion, ConversionContext context)
         {
             if (destinationType is null)
                 throw new ArgumentNullException(nameof(destinationType));

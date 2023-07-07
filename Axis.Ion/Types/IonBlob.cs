@@ -9,18 +9,21 @@ namespace Axis.Ion.Types
     /// Represents a readonly array of bytes. The array returned by <see cref="IonBlob.Value"/> is always a copy of the internal
     /// array, that way, array elements cannot be reassigned.
     /// </summary>
-    public readonly struct IonBlob : IRefValue<byte[]>, IIonDeepCopyable<IonBlob>
+    public readonly struct IonBlob :
+        IRefValue<byte[]>,
+        IIonDeepCopyable<IonBlob>,
+        IIonNullable<IonBlob>
     {
-        private readonly IIonType.Annotation[] _annotations;
+        private readonly IIonValue.Annotation[] _annotations;
         private readonly byte[]? _blob;
 
         public byte[]? Value => _blob?.ToArray();
 
         public IonTypes Type => IonTypes.Blob;
 
-        public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
+        public IIonValue.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonValue.Annotation>();
 
-        public IonBlob(byte[]? value, params IIonType.Annotation[] annotations)
+        public IonBlob(byte[]? value, params IIonValue.Annotation[] annotations)
         {
             _blob = value;
             _annotations = annotations
@@ -33,7 +36,7 @@ namespace Axis.Ion.Types
         /// </summary>
         /// <param name="annotations">any available annotation</param>
         /// <returns>The newly created null instance</returns>
-        public static IonBlob Null(params IIonType.Annotation[] annotations) => new IonBlob(null, annotations);
+        public static IonBlob Null(params IIonValue.Annotation[] annotations) => new IonBlob(null, annotations);
 
         #region IIonType
 
@@ -56,7 +59,7 @@ namespace Axis.Ion.Types
 
         #region Record Implementation
         public override int GetHashCode()
-            => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonType.Annotation, object>()));
+            => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonValue.Annotation, object>()));
 
         public override bool Equals(object? obj)
         {
@@ -77,7 +80,7 @@ namespace Axis.Ion.Types
         #endregion
 
         #region IIonDeepCopy<>
-        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+        IIonValue IIonDeepCopyable<IIonValue>.DeepCopy() => DeepCopy();
 
         public IonBlob DeepCopy() => new IonBlob(_blob, _annotations);
         #endregion

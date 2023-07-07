@@ -1,5 +1,4 @@
-﻿using Axis.Ion.Conversion.Converters;
-using Axis.Ion.Types;
+﻿using Axis.Ion.Types;
 using Axis.Luna.Extensions;
 using Axis.Luna.FInvoke;
 using System;
@@ -27,6 +26,15 @@ namespace Axis.Ion.Conversion.ClrReflection
 
         public bool CanConstruct(IonStruct ionStruct, out IonStruct.Property[] argumentSource)
         {
+            if (ionStruct is null)
+                throw new ArgumentNullException(nameof(ionStruct));
+
+            if (ionStruct.IsNull)
+            {
+                argumentSource = Array.Empty<IonStruct.Property>();
+                return false;
+            }
+
             var constructorParameterLength = Member.GetParameters().Length;
             if (constructorParameterLength == 0)
             {
@@ -34,8 +42,8 @@ namespace Axis.Ion.Conversion.ClrReflection
                 return true;
             }
 
-            var normalizedStructMap = ionStruct.Value
-                .GroupBy(property => NormalizeParameterName(property.NameText))
+            var normalizedStructMap = ionStruct.Value!
+                .GroupBy(property => NormalizeParameterName(property.Name.Value!))
                 .ToDictionary(
                     group => group.Key,
                     group => group.ToArray());
@@ -53,7 +61,7 @@ namespace Axis.Ion.Conversion.ClrReflection
                         .FirstOrNull();
                 })
                 .Where(prop => prop is not null)
-                .Select(prop => prop.Value)
+                .Select(prop => prop!.Value)
                 .ToArray();
 
             if (constructorParameterLength == argumentSource.Length)

@@ -23,6 +23,6 @@ namespace Axis.Ion.Conversion
         /// <param name="instance"></param>
         /// <param name="context"></param>
         /// <returns></returns>
-        IIonType ToIon(Type sourceType, object? instance, ConversionContext context);
+        IIonValue ToIon(Type sourceType, object? instance, ConversionContext context);
     }
 }

@@ -86,7 +86,7 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
             Assert.IsTrue(canConvert);
 
             Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(null, ionList));
-            Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(typeof(int[]), (IIonType)null));
+            Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(typeof(int[]), (IIonValue)null));
         }
 
         [TestMethod]

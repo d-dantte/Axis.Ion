@@ -5,9 +5,13 @@ using Axis.Luna.FInvoke;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Numerics;
-using static Axis.Ion.Types.IIonType;
+using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
+using System.Text;
+using static Axis.Ion.Types.IIonValue;
 
 namespace Axis.Ion
 {
@@ -36,7 +40,36 @@ namespace Axis.Ion
         #endregion
 
         #region Internal Helpers
-        internal static object? IonValue(this IIonType ion)
+        internal static IEnumerable<TItem> ThrowIfAny<TItem>(this
+            IEnumerable<TItem> items,
+            Func<TItem, bool> predicate,
+            Exception exception)
+            => items.ThrowIfAny(predicate, _ => exception);
+
+        internal static IEnumerable<TItem> ThrowIfAny<TItem>(this
+            IEnumerable<TItem> items,
+            Func<TItem, bool> predicate,
+            Func<TItem, Exception> exceptionProducer)
+        {
+            if (items is null)
+                throw new ArgumentNullException(nameof(items));
+
+            if (predicate is null)
+                throw new ArgumentNullException(nameof(predicate));
+
+            if (exceptionProducer is null)
+                throw new ArgumentNullException(nameof(exceptionProducer));
+
+            foreach(var item in items)
+            {
+                if (predicate(item))
+                    ExceptionDispatchInfo.Throw(exceptionProducer.Invoke(item));
+
+                yield return item;
+            }
+        }
+
+        internal static object? IonValue(this IIonValue ion)
         {
             if (ion is null)
                 throw new ArgumentNullException(nameof(ion));
@@ -51,8 +84,7 @@ namespace Axis.Ion
                 IonTimestamp timestamp => timestamp.Value,
                 IonString @string => @string.Value,
                 IonOperator @operator => @operator.Value,
-                IonIdentifier identifier => identifier.Value,
-                IonQuotedSymbol quoted => quoted.Value,
+                IonTextSymbol symbol => symbol.Value,
                 IonClob clob => clob.Value,
                 IonBlob blob => blob.Value,
                 IonSexp sexp => sexp.Value,
@@ -121,12 +153,8 @@ namespace Axis.Ion
             return annotations;
         }
 
-        internal static IonValueWrapper Wrap(this IIonType ionType)
+        internal static IonValueWrapper Wrap(this IIonValue ionType)
             => new IonValueWrapper(ionType);
-
-        internal static DecomposedDecimal Deconstruct(this decimal value) => new DecomposedDecimal(value);
-        internal static DecomposedDecimal Deconstruct(this float value) => new DecomposedDecimal(value);
-        internal static DecomposedDecimal Deconstruct(this double value) => new DecomposedDecimal(value);
 
         internal static bool IsEnumDefined<TEnum>(this TEnum enumValue)
         where TEnum : struct
@@ -435,6 +463,55 @@ namespace Axis.Ion
             }
 
             return newDictionary;
+        }
+
+        /// <summary>
+        /// https://stackoverflow.com/a/19283954
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="encoding"></param>
+        /// <returns></returns>
+        public static Stream PeekTextEncoding(
+            this Stream stream,
+            out Encoding encoding,
+            Encoding defaultEncoding)
+        {
+            var bufferedStream = new BufferedStream(stream);
+            var bom = new byte[4];
+            var length = bufferedStream.Read(bom, 0, bom.Length);
+
+            // UTF-32 LE
+            if (length == 4 && bom[0] == 0xff && bom[1] == 0xfe && bom[2] == 0 && bom[3] == 0)
+                encoding = Encoding.UTF32;
+
+            // UTF-32 BE
+            else if (length == 4 && bom[0] == 0 && bom[1] == 0 && bom[2] == 0xfe && bom[3] == 0xff)
+                encoding = new UTF32Encoding(true, true);
+
+            // UTF-8
+            else if (length >= 3 && bom[0] == 0xef && bom[1] == 0xbb && bom[2] == 0xbf)
+                encoding = Encoding.UTF8;
+
+            // UTF-16 LE
+            else if (length >= 2 && bom[0] == 0xff && bom[1] == 0xfe)
+                encoding = Encoding.Unicode;
+
+            // UTF-16 BE
+            else if (length >= 2 && bom[0] == 0xfe && bom[1] == 0xff)
+                encoding = Encoding.BigEndianUnicode;
+
+            else encoding = defaultEncoding ?? Encoding.ASCII;
+
+            bufferedStream.Position = 0;
+            return bufferedStream;
+        }
+
+        internal static string ToString(this StringBuilder sb, Range range)
+        {
+            if (sb is null)
+                throw new ArgumentNullException(nameof(sb));
+
+            return sb.ToString()[range];
         }
 
         #endregion

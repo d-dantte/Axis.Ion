@@ -39,7 +39,7 @@ namespace Axis.Ion.Conversion.Converters
         }
 
         #region IClrConverter
-        public bool CanConvert(Type destinationType, IIonType ion)
+        public bool CanConvert(Type destinationType, IIonValue ion)
         {
             if (destinationType is null)
                 throw new ArgumentNullException(nameof(destinationType));
@@ -52,7 +52,7 @@ namespace Axis.Ion.Conversion.Converters
                 && targetType.Equals(destinationType);
         }
 
-        public object? ToClr(Type type, IIonType ion, ConversionContext context)
+        public object? ToClr(Type type, IIonValue ion, ConversionContext context)
         {
             if (ion.Type != IonTypes.Struct)
                 throw new ArgumentException($"Invalid ion type: {ion.Type}, expected: {IonTypes.Struct}");
@@ -76,12 +76,12 @@ namespace Axis.Ion.Conversion.Converters
             return targetType.Equals(instance?.GetType() ?? sourceType);
         }
 
-        public IIonType ToIon(Type sourceType, object? instance, ConversionContext context)
+        public IIonValue ToIon(Type sourceType, object? instance, ConversionContext context)
         {
             sourceType.ValidateCongruenceWith(instance?.GetType());
 
             if (instance is null)
-                return IIonType.NullOf(IonTypes.Struct);
+                return IIonValue.NullOf(IonTypes.Struct);
 
             var ionStruct = propertyProfiles
                 .Where(profile => profile.Getter is not null)
@@ -94,7 +94,7 @@ namespace Axis.Ion.Conversion.Converters
                         && ignoredProps.Contains(profile.Member))
                         return null;
 
-                    var clrValue = profile.Getter
+                    var clrValue = profile.Getter!
                         .Invoke(instance, Array.Empty<object>());
 
                     if (NullValueBehavior.Ignore == context.Options.NullValueBehavior
@@ -115,7 +115,7 @@ namespace Axis.Ion.Conversion.Converters
                 .Where(structProperty => structProperty is not null)
                 .Select(structProperty => structProperty ?? throw new ArgumentNullException(nameof(structProperty)))
                 .ApplyTo(properties => new IonStruct.Initializer(
-                    Array.Empty<IIonType.Annotation>(),
+                    Array.Empty<IIonValue.Annotation>(),
                     properties.ToArray()))
                 .ApplyTo(initializer => new IonStruct(initializer));
 
@@ -183,12 +183,11 @@ namespace Axis.Ion.Conversion.Converters
             var value = constructor.Invoker.New(arguments);
 
             var initializedProperties = ionArguments
-                .Select(prop => prop.Name ?? throw new ArgumentNullException("Invalid property name: null"))
-                .ApplyTo(props => new HashSet<IIonTextSymbol>(props));
+                .Select(prop => prop.Name)
+                .ApplyTo(props => new HashSet<IonTextSymbol>(props));
 
-            var uninitializedProperties = ion.Value
-                .Where(prop => !initializedProperties.Contains(
-                    prop.Name ?? throw new ArgumentNullException("Invalid property name: null")))
+            var uninitializedProperties = ion.Value!
+                .Where(prop => !initializedProperties.Contains(prop.Name))
                 .ToArray();
 
             return (value, uninitializedProperties);
@@ -199,9 +198,7 @@ namespace Axis.Ion.Conversion.Converters
             IonStruct.Property[] uninitializedProperties,
             ConversionContext context)
         {
-            var propertyMap = uninitializedProperties.ToDictionary(
-                props => props.NameText ?? throw new ArgumentNullException($"Invalid property name: null"),
-                props => props.Value);
+            var propertyMap = uninitializedProperties.ToDictionary(props => props.Name, props => props.Value);
 
             propertyProfiles
                 .Where(profile => profile.Setter is not null)
@@ -240,16 +237,16 @@ namespace Axis.Ion.Conversion.Converters
             return instance;
         }
 
-        private string InvalidTypeError(string param) => $"Supplied type must not be {param}";
+        private static string InvalidTypeError(string param) => $"Supplied type must not be {param}";
 
-        private bool SkipDefault(object? value, Type targetType, ConversionContext context)
+        private static bool SkipDefault(object? value, Type targetType, ConversionContext context)
         {
             return 
                 EqualityComparer<object>.Default.Equals(value, targetType.DefaultValue())
                 && DefaultValueBehavior.Ignore.Equals(context.Options.DefaultValueBehavior);
         }
 
-        private bool SkipNull(object? value, ConversionContext context)
+        private static bool SkipNull(object? value, ConversionContext context)
         {
             return
                 value is null

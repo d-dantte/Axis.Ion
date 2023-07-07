@@ -10,7 +10,7 @@ namespace Axis.Ion.IO.Axion.Payload
     {
         public IonClobPayload(IonClob @string)
         {
-            IonType = @string;
+            IonValue = @string;
             Metadata = TypeMetadata.SerializeMetadata(@string);
         }
 
@@ -46,11 +46,11 @@ namespace Axis.Ion.IO.Axion.Payload
             // annotations
             var annotations = metadata.HasAnnotations
                 ? TypeMetadata.ReadAnnotations(stream, options, symbolTable)
-                : Array.Empty<IIonType.Annotation>();
+                : Array.Empty<IIonValue.Annotation>();
 
             // null?
             if (metadata.IsNull)
-                return new IonClobPayload((IonClob)IIonType.NullOf(IonTypes.Clob, annotations));
+                return new IonClobPayload((IonClob)IIonValue.NullOf(IonTypes.Clob, annotations));
 
             // non-null?
             else
@@ -70,16 +70,16 @@ namespace Axis.Ion.IO.Axion.Payload
 
         public TypeMetadata Metadata { get; }
 
-        public IIonType IonType { get; }
+        public IIonValue IonValue { get; }
 
         public byte[] SerializeData(
             SerializerOptions options,
             SymbolHashList symbolTable)
         {
-            if (IonType.IsNull)
+            if (IonValue.IsNull)
                 return Array.Empty<byte>();
 
-            var ionClob = (IonClob)IonType;
+            var ionClob = (IonClob)IonValue;
             var arrayValue = ionClob.Value ?? Array.Empty<byte>();
 
             return arrayValue.Length

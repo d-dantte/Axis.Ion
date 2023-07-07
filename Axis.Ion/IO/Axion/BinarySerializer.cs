@@ -6,10 +6,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using static Axis.Ion.IO.Axion.Payload.IonSymbolPayload;
 
 namespace Axis.Ion.IO.Axion
 {
-    public class BinarySerializer : IIonSerializer
+    public class BinarySerializer : IIonBinarySerializer
     {
         private readonly SerializerOptions options;
 
@@ -35,31 +36,29 @@ namespace Axis.Ion.IO.Axion
         }
 
         internal static byte[] SerializeIon(
-            IIonType ionValue,
+            IIonValue ionValue,
             SerializerOptions options,
             SymbolHashList symbolTable)
         {
-            ITypePayload payload = ionValue.Type switch
+            ITypePayload payload = ionValue switch
             {
-                IonTypes.Null => new IonNullPayload((IonNull)ionValue),
-                IonTypes.Bool => new IonBoolPayload((IonBool)ionValue),
-                IonTypes.Int => new IonIntPayload((IonInt)ionValue),
-                IonTypes.Decimal => new IonDecimalPayload((IonDecimal)ionValue),
-                IonTypes.Float => new IonFloatPayload((IonFloat)ionValue),
-                IonTypes.Timestamp => new IonTimestampPayload((IonTimestamp)ionValue),
-                IonTypes.String => new IonStringPayload((IonString)ionValue),
-                IonTypes.OperatorSymbol => new IonSymbolPayload((IonOperator)ionValue),
-                IonTypes.Blob => new IonBlobPayload((IonBlob)ionValue),
-                IonTypes.Clob => new IonClobPayload((IonClob)ionValue),
-                IonTypes.List => new IonListPayload((IonList)ionValue),
-                IonTypes.Sexp => new IonSexpPayload((IonSexp)ionValue),
-                IonTypes.Struct => new IonStructPayload((IonStruct)ionValue),
+                IonNull @null => new IonNullPayload(@null),
+                IonBool @bool => new IonBoolPayload(@bool),
+                IonInt @int => new IonIntPayload(@int),
+                IonDecimal @decimal => new IonDecimalPayload(@decimal),
+                IonFloat @float => new IonFloatPayload(@float),
+                IonTimestamp timestamp => new IonTimestampPayload(timestamp),
+                IonString @string => new IonStringPayload(@string),
+                IonOperator @operator => new IonSymbolPayload(@operator),
+                IonBlob blob => new IonBlobPayload(blob),
+                IonClob clob => new IonClobPayload(clob),
+                IonList list => new IonListPayload(list),
+                IonSexp sexp => new IonSexpPayload(sexp),
+                IonStruct @struct => new IonStructPayload(@struct),
 
-                IonTypes.IdentifierSymbol =>
-                    new IonSymbolPayload(symbolTable.AddOrGetID((IonIdentifier)ionValue)),
-
-                IonTypes.QuotedSymbol =>
-                    new IonSymbolPayload(symbolTable.AddOrGetID((IonQuotedSymbol)ionValue)),
+                IonTextSymbol symbol => symbolTable.TryAdd(symbol, out var index)
+                    ? new IonSymbolPayload(symbol)
+                    : new IonSymbolPayload(new IonSymbolID(index)),
 
                 _ =>  throw new ArgumentException($"Invalid ion-type: {ionValue.Type}")
             };
@@ -69,7 +68,7 @@ namespace Axis.Ion.IO.Axion
             return memory.ToArray();
         }
 
-        internal static IIonType? DeserializeIon(
+        internal static IIonValue? DeserializeIon(
             Stream ionStream,
             SerializerOptions options,
             SymbolHashList symbolTable)
@@ -85,72 +84,68 @@ namespace Axis.Ion.IO.Axion
             {
                 IonTypes.Null => IonNullPayload
                     .Read(ionStream, metadata, options, symbolTable)
-                    .IonType,
+                    .IonValue,
 
                 IonTypes.Bool => IonBoolPayload
                     .Read(ionStream, metadata, options, symbolTable)
-                    .IonType,
+                    .IonValue,
 
                 IonTypes.Int => IonIntPayload
                     .Read(ionStream, metadata, options, symbolTable)
-                    .IonType,
+                    .IonValue,
 
                 IonTypes.Decimal => IonDecimalPayload
                     .Read(ionStream, metadata, options, symbolTable)
-                    .IonType,
+                    .IonValue,
 
                 IonTypes.Float => IonFloatPayload
                     .Read(ionStream, metadata, options, symbolTable)
-                    .IonType,
+                    .IonValue,
 
                 IonTypes.Timestamp => IonTimestampPayload
                     .Read(ionStream, metadata, options, symbolTable)
-                    .IonType,
+                    .IonValue,
 
                 IonTypes.String => IonStringPayload
                     .Read(ionStream, metadata, options, symbolTable)
-                    .IonType,
+                    .IonValue,
 
                 IonTypes.Clob => IonClobPayload
                     .Read(ionStream, metadata, options, symbolTable)
-                    .IonType,
+                    .IonValue,
 
                 IonTypes.Blob => IonBlobPayload
                     .Read(ionStream, metadata, options, symbolTable)
-                    .IonType,
+                    .IonValue,
 
                 IonTypes.List => IonListPayload
                     .Read(ionStream, metadata, options, symbolTable)
-                    .IonType,
+                    .IonValue,
 
                 IonTypes.Sexp => IonSexpPayload
                     .Read(ionStream, metadata, options, symbolTable)
-                    .IonType,
+                    .IonValue,
 
                 IonTypes.Struct => IonStructPayload
                     .Read(ionStream, metadata, options, symbolTable)
-                    .IonType,
+                    .IonValue,
 
                 IonTypes.OperatorSymbol => IonSymbolPayload
                     .Read(ionStream, metadata, options, symbolTable)
-                    .IonType,
+                    .IonValue,
 
-                IonTypes.IdentifierSymbol => IonSymbolPayload
+                IonTypes.TextSymbol => IonSymbolPayload
                     .Read(ionStream, metadata, options, symbolTable)
-                    .IonType,
-
-                IonTypes.QuotedSymbol => IonSymbolPayload
-                    .Read(ionStream, metadata, options, symbolTable)
-                    .IonType,
+                    .IonValue,
 
                 _ => throw new InvalidOperationException($"Invalid metadata ion-type: {metadata.IonType}")
             };
         }
 
-        private IEnumerable<IIonType> ReadIonValues(Stream stream)
+        private IEnumerable<IIonValue> ReadIonValues(Stream stream)
         {
             var symbolTable = new SymbolHashList();
-            IIonType? value;
+            IIonValue? value;
             while ((value = DeserializeIon(stream, options, symbolTable)) != null)
             {
                 yield return value;

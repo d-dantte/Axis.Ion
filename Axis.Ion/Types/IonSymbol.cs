@@ -39,14 +39,14 @@ namespace Axis.Ion.Types
     /// </summary>
     public readonly struct IonOperator : IRefValue<Operators[]>, IIonDeepCopyable<IonOperator>
     {
-        private readonly IIonType.Annotation[] _annotations;
+        private readonly IIonValue.Annotation[] _annotations;
 
         /// <summary>
         /// An empty operator array is not allowed
         /// </summary>
         /// <param name="operators"></param>
         /// <param name="annotations"></param>
-        public IonOperator(Operators[]? operators, params IIonType.Annotation[] annotations)
+        public IonOperator(Operators[]? operators, params IIonValue.Annotation[] annotations)
         {
             Value = operators.ThrowIf(
                 ops => ops?.Length == 0,
@@ -57,7 +57,7 @@ namespace Axis.Ion.Types
         }
 
         public IonOperator(params Operators[] operators)
-            : this(operators, Array.Empty<IIonType.Annotation>())
+            : this(operators, Array.Empty<IIonValue.Annotation>())
         {
         }
 
@@ -87,7 +87,7 @@ namespace Axis.Ion.Types
 
         public bool IsNull => Value == null;
 
-        public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
+        public IIonValue.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonValue.Annotation>();
 
         public string ToIonText()
         {
@@ -105,7 +105,7 @@ namespace Axis.Ion.Types
         public override int GetHashCode()
             => HashCode.Combine(
                 ValueHash(Value.HardCast<Operators, object>()),
-                ValueHash(Annotations.HardCast<IIonType.Annotation, object>()));
+                ValueHash(Annotations.HardCast<IIonValue.Annotation, object>()));
 
         public override bool Equals(object? obj)
         {
@@ -129,39 +129,19 @@ namespace Axis.Ion.Types
         #endregion
 
         #region IIonDeepCopy<>
-        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+        IIonValue IIonDeepCopyable<IIonValue>.DeepCopy() => DeepCopy();
 
         public IonOperator DeepCopy() => new IonOperator(Value, Annotations);
         #endregion
 
         #region Parsing
-        public static IonOperator Parse(string? @string, params IIonType.Annotation[] annotations)
-        {
-            _ = TryParse(@string, annotations, out var result);
-            return result.Resolve();
-        }
-
-        public static bool TryParse(
-            string? @string,
-            out IResult<IonOperator> symbolResult)
-            => TryParse(@string, Array.Empty<IIonType.Annotation>(), out symbolResult);
-
-        public static bool TryParse(
-            string? @string,
-            IIonType.Annotation[] annotations,
-            out IResult<IonOperator> result)
+        public static IResult<IonOperator> Parse(string? @string, params IIonValue.Annotation[] annotations)
         {
             if (@string is null)
-            {
-                result = Result.Of<IonOperator>(new ArgumentNullException(nameof(@string)));
-                return false;
-            }
+                return Result.Of<IonOperator>(new ArgumentNullException(nameof(@string)));
 
             if (string.IsNullOrWhiteSpace(@string))
-            {
-                result = Result.Of<IonOperator>(new FormatException("Invalid input format"));
-                return false;
-            }
+                return Result.Of<IonOperator>(new FormatException("Invalid input format"));
 
             IResult<IonOperator>[] results = @string
                 .Trim()
@@ -169,76 +149,59 @@ namespace Axis.Ion.Types
                 .GroupBy(op => op.IsEnumDefined())
                 .Select(group => group.Key switch
                 {
-                    true => Result.Of<IonOperator>(new IonOperator(group.ToArray(), annotations)),
+                    true => Result.Of(new IonOperator(group.ToArray(), annotations)),
                     false => Result.Of<IonOperator>(
                         new FormatException(
                             $"Invalid operator symbols found: {group.Select(op => (char)op).JoinUsing(", ")}"))
                 })
                 .ToArray();
 
-            result = results.Length == 2
+            return results.Length == 2
                 ? results!.First(r => r is IResult<IonOperator>.ErrorResult)
                 : results![0];
-
-            return result is IResult<IonOperator>.DataResult;
-        }
-        #endregion
-    }
-
-    public interface IIonTextSymbol: IRefValue<string>
-    {
-        public static IIonTextSymbol Parse(string value, params Annotation[] annotations)
-        {
-            _ = TryParse(value, annotations, out var result);
-            return result.Resolve();
         }
 
         public static bool TryParse(
-            string symbol,
-            Annotation[] annotations,
-            out IResult<IIonTextSymbol> symbolResult)
-        {
-            try
-            {
-                if (IonIdentifier.TryParse(symbol, annotations, out var identifierResult))
-                    symbolResult = identifierResult.Map<IIonTextSymbol>(identifier => identifier);
+            string? @string,
+            out IResult<IonOperator> symbolResult)
+            => TryParse(@string, Array.Empty<IIonValue.Annotation>(), out symbolResult);
 
-                else if (IonQuotedSymbol.TryParse(symbol, annotations, out var quotedSymbolResult))
-                    symbolResult = quotedSymbolResult.Map<IIonTextSymbol>(identifier => identifier);
-
-                else
-                    symbolResult = Result.Of<IIonTextSymbol>(new FormatException($"Invalid symbol format: {symbol}"));
-
-                return symbolResult is IResult<IIonTextSymbol>.DataResult;
-            }
-            catch (Exception ex)
-            {
-                symbolResult = Result.Of<IIonTextSymbol>(ex);
-                return false;
-            }
-        }
-
-        public static bool TryParse(string value, out IResult<IIonTextSymbol> symbolResult)
-            => TryParse(value, Array.Empty<Annotation>(), out symbolResult);
+        public static bool TryParse(
+            string? @string,
+            IIonValue.Annotation[] annotations,
+            out IResult<IonOperator> result)
+            => (result = Parse(@string, annotations)) is IResult<IonOperator>.DataResult;
+        #endregion
     }
 
     /// <summary>
-    /// Ion Identifier symbol - unquoted word characters
+    /// 
     /// </summary>
-    public readonly struct IonIdentifier : IIonTextSymbol, IIonDeepCopyable<IonIdentifier>
+    public readonly struct IonTextSymbol :
+        IRefValue<string>,
+        IIonDeepCopyable<IonTextSymbol>,
+        IResultParsable<IonTextSymbol>,
+        IIonNullable<IonTextSymbol>
     {
         private static readonly Regex IdentifierPattern = new Regex(
             "^[a-zA-Z_\\$][a-zA-Z0-9_\\$]*$",
             RegexOptions.Compiled);
 
-        private readonly IIonType.Annotation[] _annotations;
+        private readonly IIonValue.Annotation[] _annotations;
 
-        public IonIdentifier(string? symbolText, params IIonType.Annotation[] annotations)
+        public bool IsIdentifier => !IsNull && IdentifierPattern.IsMatch(Value!);
+
+        public IonTextSymbol(IIonValue.Annotation[] annotations)
+        : this(null, annotations)
         {
-            Value = 
-                symbolText == null ? null :
+        }
+
+        public IonTextSymbol(string? symbolText, params IIonValue.Annotation[] annotations)
+        {
+            Value =
+                symbolText is null ? null :
                 IdentifierPattern.IsMatch(symbolText) ? symbolText :
-                throw new FormatException($"Invalid identifier format: {symbolText}");
+                Normalize(symbolText);
 
             _annotations = annotations.Validate().ToArray();
         }
@@ -247,119 +210,14 @@ namespace Axis.Ion.Types
         /// Creates a null instance of the <see cref="IonIdentifier"/>
         /// </summary>
         /// <returns>The newly created null instance</returns>
-        public static IonIdentifier Null() => new IonIdentifier();
-
-        #region IIonValueType
-
-        public string? Value { get; }
-
-        public bool ValueEquals(IRefValue<string> other) => Value.NullOrEquals(other.Value);
-        #endregion
-
-        #region IIonType
-        public IonTypes Type => IonTypes.IdentifierSymbol;
-
-        public bool IsNull => Value == null;
-
-        public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
-
-        public string ToIonText() => Value ?? "null.symbol";
-        #endregion
-
-        #region Record Implementation
-        public override int GetHashCode()
-            => HashCode.Combine(
-                Value,
-                ValueHash(Annotations.HardCast<IIonType.Annotation, object>()));
-
-        public override bool Equals(object? obj)
-        {
-            return obj is IonIdentifier other
-                && other.Value.NullOrEquals(Value)
-                && other.Annotations.SequenceEqual(Annotations);
-        }
-
-        public override string ToString() => Annotations
-            .Select(a => a.ToString())
-            .Concat(ToIonText())
-            .JoinUsing("");
-
-
-        public static bool operator ==(IonIdentifier first, IonIdentifier second) => first.Equals(second);
-
-        public static bool operator !=(IonIdentifier first, IonIdentifier second) => !first.Equals(second);
-
-        public static implicit operator IonIdentifier(string text) => Parse(text);
-
-        #endregion
-
-        #region IIonDeepCopy<>
-        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
-
-        public IonIdentifier DeepCopy() => new IonIdentifier(Value, Annotations);
-        #endregion
-
-        #region Parsing
-        public static IonIdentifier Parse(string? @string, params IIonType.Annotation[] annotations)
-        {
-            _ = TryParse(@string, annotations, out var result);
-            return result.Resolve();
-        }
-
-        public static bool TryParse(
-            string? @string,
-            out IResult<IonIdentifier> symbolResult)
-            => TryParse(@string, Array.Empty<IIonType.Annotation>(), out symbolResult);
-
-        public static bool TryParse(
-            string? @string,
-            IIonType.Annotation[] annotations,
-            out IResult<IonIdentifier> result)
-        {
-            if (@string is null)
-            {
-                result = Result.Of<IonIdentifier>(new ArgumentNullException(nameof(@string)));
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(@string))
-            {
-                result = Result.Of<IonIdentifier>(new FormatException("Invalid identifier format"));
-                return false;
-            }
-
-            var trimmed = @string.Trim();
-            if (!IdentifierPattern.IsMatch(trimmed))
-            {
-                result = Result.Of<IonIdentifier>(new FormatException($"Invalid identifier format: {@string}"));
-                return false;
-            }
-
-            result = Result.Of(new IonIdentifier(trimmed, annotations));
-            return true;
-        }
-        #endregion
-    }
-
-    /// <summary>
-    /// Quoted symbol.
-    /// </summary>
-    public readonly struct IonQuotedSymbol : IIonTextSymbol, IIonDeepCopyable<IonQuotedSymbol>
-    {
-        private readonly IIonType.Annotation[] _annotations;
-
-        public IonQuotedSymbol(string? symbolText, params IIonType.Annotation[] annotations)
-        {
-            Value = Normalize(symbolText);
-            _annotations = annotations.Validate().ToArray();
-        }
+        public static IonTextSymbol Null(params IIonValue.Annotation[] annotations) => new IonTextSymbol(annotations);
 
         private static string? Normalize(string? symbolText)
         {
             if (string.IsNullOrWhiteSpace(symbolText))
                 return symbolText;
 
-            var normalized = symbolText.StartsWith('\'') && symbolText.EndsWith('\'')
+            var normalized = symbolText.IsWrappedIn("'")
                 ? symbolText[1..^1]
                 : symbolText;
 
@@ -369,12 +227,6 @@ namespace Axis.Ion.Types
             return normalized;
         }
 
-        /// <summary>
-        /// Creates a null instance of the <see cref="IonQuotedSymbol"/>
-        /// </summary>
-        /// <returns>The newly created null instance</returns>
-        public static IonQuotedSymbol Null() => new IonQuotedSymbol();
-
         #region IIonValueType
 
         public string? Value { get; }
@@ -383,19 +235,18 @@ namespace Axis.Ion.Types
         #endregion
 
         #region IIonType
-
-        public IonTypes Type => IonTypes.QuotedSymbol;
+        public IonTypes Type => IonTypes.TextSymbol;
 
         public bool IsNull => Value == null;
 
-        public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
+        public IIonValue.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonValue.Annotation>();
 
         public string ToIonText()
         {
-            if (Value is null)
-                return "null.symbol";
-
-            return $"'{Value}'";
+            return
+                Value is null ? "null.symbol" :
+                IdentifierPattern.IsMatch(Value) ? Value :
+                $"'{Value}'";
         }
         #endregion
 
@@ -403,11 +254,11 @@ namespace Axis.Ion.Types
         public override int GetHashCode()
             => HashCode.Combine(
                 Value,
-                ValueHash(Annotations.HardCast<IIonType.Annotation, object>()));
+                ValueHash(Annotations.HardCast<IIonValue.Annotation, object>()));
 
         public override bool Equals(object? obj)
         {
-            return obj is IonQuotedSymbol other
+            return obj is IonTextSymbol other
                 && other.Value.NullOrEquals(Value)
                 && other.Annotations.SequenceEqual(Annotations);
         }
@@ -418,53 +269,49 @@ namespace Axis.Ion.Types
             .JoinUsing("");
 
 
-        public static bool operator ==(IonQuotedSymbol first, IonQuotedSymbol second) => first.Equals(second);
+        public static bool operator ==(IonTextSymbol first, IonTextSymbol second) => first.Equals(second);
 
-        public static bool operator !=(IonQuotedSymbol first, IonQuotedSymbol second) => !first.Equals(second);
+        public static bool operator !=(IonTextSymbol first, IonTextSymbol second) => !first.Equals(second);
 
-        public static implicit operator IonQuotedSymbol(string text) => Parse(text);
+        public static implicit operator IonTextSymbol(string text) => Parse(text).Resolve();
 
         #endregion
 
         #region IIonDeepCopy<>
-        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+        IIonValue IIonDeepCopyable<IIonValue>.DeepCopy() => DeepCopy();
 
-        public IonQuotedSymbol DeepCopy() => new IonQuotedSymbol(Value, Annotations);
+        public IonTextSymbol DeepCopy() => new IonTextSymbol(Value, Annotations);
         #endregion
 
         #region Parsing
-        public static IonQuotedSymbol Parse(string? @string, params IIonType.Annotation[] annotations)
-        {
-            _ = TryParse(@string, annotations, out var result);
-            return result.Resolve();
-        }
 
         public static bool TryParse(
             string? @string,
-            out IResult<IonQuotedSymbol> symbolResult)
-            => TryParse(@string, Array.Empty<IIonType.Annotation>(), out symbolResult);
+            out IResult<IonTextSymbol> symbolResult)
+            => TryParse(@string, Array.Empty<IIonValue.Annotation>(), out symbolResult);
 
         public static bool TryParse(
             string? @string,
-            IIonType.Annotation[] annotations,
-            out IResult<IonQuotedSymbol> result)
+            IIonValue.Annotation[] annotations,
+            out IResult<IonTextSymbol> result)
+            => (result = Parse(@string, annotations)) is IResult<IonTextSymbol>.DataResult;
+
+        public static IResult<IonTextSymbol> Parse(
+            string? @string)
+            => Parse(@string, Array.Empty<IIonValue.Annotation>());
+
+        public static IResult<IonTextSymbol> Parse(
+            string? @string,
+            params IIonValue.Annotation[] annotations)
         {
             if (@string is null)
-            {
-                result = Result.Of<IonQuotedSymbol>(new ArgumentNullException(nameof(@string)));
-                return false;
-            }
+                return Result.Of<IonTextSymbol>(new ArgumentNullException(nameof(@string)));
 
             if (string.IsNullOrWhiteSpace(@string))
-            {
-                result = Result.Of<IonQuotedSymbol>(new FormatException("Invalid input format"));
-                return false;
-            }
+                return Result.Of<IonTextSymbol>(new FormatException("Invalid symbol format"));
 
-            result = Result.Of(() => new IonQuotedSymbol(@string, annotations));
-            return result is IResult<IonQuotedSymbol>.DataResult;
+            return Result.Of(() => new IonTextSymbol(@string.Trim(), annotations));
         }
         #endregion
     }
-
 }

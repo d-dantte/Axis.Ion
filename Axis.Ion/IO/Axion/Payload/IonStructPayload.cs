@@ -11,7 +11,7 @@ namespace Axis.Ion.IO.Axion.Payload
     {
         public IonStructPayload(IonStruct list)
         {
-            IonType = list;
+            IonValue = list;
             Metadata = TypeMetadata.SerializeMetadata(list);
         }
 
@@ -47,11 +47,11 @@ namespace Axis.Ion.IO.Axion.Payload
             // annotations
             var annotations = metadata.HasAnnotations
                 ? TypeMetadata.ReadAnnotations(stream, options, symbolTable)
-                : Array.Empty<IIonType.Annotation>();
+                : Array.Empty<IIonValue.Annotation>();
 
             // null?
             if (metadata.IsNull)
-                return new IonStructPayload((IonStruct)IIonType.NullOf(IonTypes.Struct, annotations));
+                return new IonStructPayload((IonStruct)IIonValue.NullOf(IonTypes.Struct, annotations));
 
             // non-null?
             else
@@ -64,8 +64,7 @@ namespace Axis.Ion.IO.Axion.Payload
                         // name
                         var nameSymbol = BinarySerializer
                             .DeserializeIon(stream, options, symbolTable)
-                            .ApplyTo(ion => (IIonTextSymbol)ion)
-                            ?? throw new InvalidOperationException($"");
+                            .ApplyTo(ion => (IonTextSymbol)ion!);
 
                         // value
                         var value = BinarySerializer
@@ -88,16 +87,16 @@ namespace Axis.Ion.IO.Axion.Payload
 
         public TypeMetadata Metadata { get; }
 
-        public IIonType IonType { get; }
+        public IIonValue IonValue { get; }
 
         public byte[] SerializeData(
             SerializerOptions options,
             SymbolHashList symbolTable)
         {
-            if (IonType.IsNull)
+            if (IonValue.IsNull)
                 return Array.Empty<byte>();
 
-            var ionStruct = (IonStruct)IonType;
+            var ionStruct = (IonStruct)IonValue;
             var properties = ionStruct.Value ?? Array.Empty<IonStruct.Property>();
 
             return properties.Length
@@ -105,10 +104,7 @@ namespace Axis.Ion.IO.Axion.Payload
                 .Concat(properties.SelectMany(property =>
                 {
                     return BinarySerializer
-                        .SerializeIon(
-                            property.Name ?? throw new ArgumentException($"Invalid property: {property}"),
-                            options,
-                            symbolTable)
+                        .SerializeIon(property.Name, options, symbolTable)
                         .Concat(
                             BinarySerializer.SerializeIon(
                                 property.Value,

@@ -36,23 +36,23 @@ namespace Axis.Ion.Conversion.Converters
         };
 
         #region IClrConverter
-        public bool CanConvert(Type destinationType, IIonType ion)
+        public bool CanConvert(Type destinationType, IIonValue ion)
         {
             return
                 TypeCategory.ComplexMap == ConversionUtils.CategoryOf(destinationType)
                 && ion is IonStruct @struct
-                && (@struct.IsNull || @struct.Properties.Contains(ItemMapPropertyName));
+                && (@struct.IsNull || @struct.ContainsProperty(ItemMapPropertyName));
         }
 
-        public object? ToClr(Type destinationType, IIonType ion, ConversionContext context)
+        public object? ToClr(Type destinationType, IIonValue ion, ConversionContext context)
         {
             if (destinationType is null)
                 throw new ArgumentNullException(nameof(destinationType));
 
-            var @struct = (IonStruct)ion;
+            var @struct = (ion as IonStruct) ?? throw new ArgumentException($"Cannot convert '{nameof(ion)}' to '{typeof(IonStruct)}'");
 
             // Get the ItemMap
-            if (!@struct.Properties.TryGetvalue(ItemMapPropertyName, out var _value))
+            if (!@struct.TryGetValue(ItemMapPropertyName, out var _value))
                 throw new ArgumentException("Invalid complex map: ItemMap not present");
 
             if (_value is not IonStruct ionItemMap)
@@ -89,7 +89,7 @@ namespace Axis.Ion.Conversion.Converters
             return TypeCategory.ComplexMap == ConversionUtils.CategoryOf(instance?.GetType() ?? sourceType);
         }
 
-        public IIonType ToIon(Type sourceType, object? instance, ConversionContext context)
+        public IIonValue ToIon(Type sourceType, object? instance, ConversionContext context)
         {
             var targetType = instance?.GetType() ?? sourceType;
 
@@ -104,7 +104,7 @@ namespace Axis.Ion.Conversion.Converters
             var objectMap = reflectionInfoList
                 .Where(info => !excludedPropertySet.Contains(info.Member.Name))
                 .Where(info => info.Getter is not null)
-                .Select(info => (name: info.Member.Name, value: NormalizeNull(info, info.Getter.Invoke(instance))))
+                .Select(info => (name: info.Member.Name, value: NormalizeNull(info, info.Getter!.Invoke(instance))))
                 .ToDictionary(kvp => kvp.name, kvp => kvp.value);
 
             var itemMap = ToItemMap(instance);
@@ -112,8 +112,7 @@ namespace Axis.Ion.Conversion.Converters
             var newTargetType = typeof(Dictionary<string, object>);
             var objectIonStruct = (IonStruct)Ionizer.ToIon(newTargetType, objectMap, newContext);
             var itemMapStruct = Ionizer.ToIon(newTargetType, itemMap, newContext);
-            var structProperties = objectIonStruct.Properties;
-            structProperties[ItemMapPropertyName] = itemMapStruct;
+            objectIonStruct[ItemMapPropertyName] = itemMapStruct;
 
             return objectIonStruct;
         }

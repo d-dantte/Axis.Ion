@@ -135,44 +135,5 @@ namespace Axis.Ion.Tests.Utils
             Assert.AreEqual("2.34E-3", scientific);
         }
 
-        [TestMethod]
-        public void ToSicientificNotation2_ShouldReturnCorrectValue()
-        {
-            var value = default(DecomposedDecimal2);
-            var scientific = value.ToScientificNotation(5);
-            Assert.AreEqual("0.0E0", scientific);
-
-            value = new DecomposedDecimal2(-0.0d);
-            scientific = value.ToScientificNotation(5);
-            Assert.AreEqual("0.0E0", scientific);
-
-            value = new DecomposedDecimal2(1.0d);
-            scientific = value.ToScientificNotation(5);
-            Assert.AreEqual("1.0E0", scientific);
-
-            value = new DecomposedDecimal2(10.0d);
-            scientific = value.ToScientificNotation(5);
-            Assert.AreEqual("1.0E1", scientific);
-
-            value = new DecomposedDecimal2(-3000.0d);
-            scientific = value.ToScientificNotation(5);
-            Assert.AreEqual("-3.0E3", scientific);
-
-            value = new DecomposedDecimal2(0.00234567d);
-            scientific = value.ToScientificNotation(3);
-            Assert.AreEqual("2.34E-3", scientific);
-
-            value = new DecomposedDecimal2(0.00234567d);
-            scientific = value.ToScientificNotation(6);
-            Assert.IsTrue(new Regex(@"^\d\.\d{5}E\-3$").IsMatch(scientific));
-
-            value = new DecomposedDecimal2(0.00234567d);
-            scientific = value.ToScientificNotation(7);
-            Assert.IsTrue(new Regex(@"^\d\.\d{6}E\-3$").IsMatch(scientific));
-
-            value = new DecomposedDecimal2(0.00234000d);
-            scientific = value.ToScientificNotation(7);
-            Assert.AreEqual("2.34E-3", scientific);
-        }
     }
 }

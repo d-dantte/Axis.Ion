@@ -54,13 +54,14 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
             };
 
             var ion = profile.ToIon(map.GetType(), map, options);
+            var @struct = ion as IonStruct;
             Assert.IsNotNull(ion);
-            Assert.IsTrue(ion is IonStruct @struct);
-            Assert.AreEqual(@struct.Properties["Name"].Type, IonTypes.String);
-            Assert.AreEqual(@struct.Properties["Price"].Type, IonTypes.Decimal);
-            Assert.AreEqual(@struct.Properties["Description"].Type, IonTypes.String);
-            Assert.IsTrue(@struct.Properties["Description"].IsNull);
-            Assert.IsTrue(@struct.Properties.Contains(ComplexMapConverter.ItemMapPropertyName));
+            Assert.IsNotNull(@struct);
+            Assert.AreEqual(@struct["Name"].Type, IonTypes.String);
+            Assert.AreEqual(@struct["Price"].Type, IonTypes.Decimal);
+            Assert.AreEqual(@struct["Description"].Type, IonTypes.String);
+            Assert.IsTrue(@struct["Description"].IsNull);
+            Assert.IsTrue(@struct.ContainsProperty(ComplexMapConverter.ItemMapPropertyName));
         }
 
         [TestMethod]

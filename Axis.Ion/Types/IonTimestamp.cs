@@ -5,19 +5,22 @@ using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
-    public readonly struct IonTimestamp : IStructValue<DateTimeOffset>, IIonDeepCopyable<IonTimestamp>
+    public readonly struct IonTimestamp :
+        IStructValue<DateTimeOffset>,
+        IIonDeepCopyable<IonTimestamp>,
+        IIonNullable<IonTimestamp>
     {
         internal static readonly string Format = "yyyy-MM-ddTHH:mm:ss.ffffffzzz";
 
-        private readonly IIonType.Annotation[] _annotations;
+        private readonly IIonValue.Annotation[] _annotations;
 
         public DateTimeOffset? Value { get; }
 
         public IonTypes Type => IonTypes.Timestamp;
 
-        public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
+        public IIonValue.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonValue.Annotation>();
 
-        public IonTimestamp(DateTimeOffset? value, params IIonType.Annotation[] annotations)
+        public IonTimestamp(DateTimeOffset? value, params IIonValue.Annotation[] annotations)
         {
             Value = value;
             _annotations = annotations
@@ -29,7 +32,7 @@ namespace Axis.Ion.Types
         /// Creates a null instance of the <see cref="IonTimestamp"/>
         /// </summary>
         /// <returns>The newly created null instance</returns>
-        public static IonTimestamp Null(params IIonType.Annotation[] annotations) => new IonTimestamp(null, annotations);
+        public static IonTimestamp Null(params IIonValue.Annotation[] annotations) => new IonTimestamp(null, annotations);
 
         #region IIonType
 
@@ -43,7 +46,7 @@ namespace Axis.Ion.Types
 
         #region Record Implementation
         public override int GetHashCode()
-            => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonType.Annotation, object>()));
+            => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonValue.Annotation, object>()));
 
         public override bool Equals(object? obj)
         {
@@ -65,7 +68,7 @@ namespace Axis.Ion.Types
         #endregion
 
         #region IIonDeepCopy<>
-        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+        IIonValue IIonDeepCopyable<IIonValue>.DeepCopy() => DeepCopy();
 
         public IonTimestamp DeepCopy() => new IonTimestamp(Value, Annotations);
         #endregion

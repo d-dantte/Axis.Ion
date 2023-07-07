@@ -19,7 +19,7 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
                 (typeof(ushort), (ushort)4),
                 (typeof(int), 4),
                 (typeof(uint), (uint)4),
-                (typeof(long), 4l),
+                (typeof(long), 4L),
                 (typeof(ulong), 4ul),
                 (typeof(float), 4f),
                 (typeof(double), 4.0),
@@ -60,7 +60,7 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
             var ionString = new IonString("stuff");
             var types = new[]
             {
-                (typeof(short), (IIonType)ionInt),
+                (typeof(short), (IIonValue)ionInt),
                 (typeof(ushort), ionInt),
                 (typeof(int), ionInt),
                 (typeof(uint), ionInt),
@@ -91,7 +91,7 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
             }
 
             Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(null, IonString.Null()));
-            Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(typeof(string), (IIonType)null));
+            Assert.ThrowsException<ArgumentNullException>(() => profile.CanConvert(typeof(string), (IIonValue)null));
             Assert.IsFalse(profile.CanConvert(typeof(string), 5));
         }
 
@@ -100,35 +100,35 @@ namespace Axis.Ion.Tests.Conversion.IonProfiles
         {
             var nullableBase = typeof(Nullable<>);
 
-            var nullIon = IIonType.NullOf(IonTypes.Null);
+            var nullIon = IIonValue.NullOf(IonTypes.Null);
 
             #region Types
             // bool
-            IIonType boolIon = new IonBool(true);
-            IIonType nboolIon = IIonType.NullOf(IonTypes.Bool);
+            IIonValue boolIon = new IonBool(true);
+            IIonValue nboolIon = IIonValue.NullOf(IonTypes.Bool);
 
             // int
-            IIonType intIon = new IonInt(4);
-            IIonType nintIon = IIonType.NullOf(IonTypes.Int);
+            IIonValue intIon = new IonInt(4);
+            IIonValue nintIon = IIonValue.NullOf(IonTypes.Int);
 
             // real
-            IIonType realIon = new IonFloat(4);
-            IIonType nrealIon = IIonType.NullOf(IonTypes.Float);
+            IIonValue realIon = new IonFloat(4);
+            IIonValue nrealIon = IIonValue.NullOf(IonTypes.Float);
 
             // decimal
-            IIonType decimalIon = new IonDecimal(4);
-            IIonType ndecimalIon = IIonType.NullOf(IonTypes.Decimal);
+            IIonValue decimalIon = new IonDecimal(4);
+            IIonValue ndecimalIon = IIonValue.NullOf(IonTypes.Decimal);
 
             // timestamp
-            IIonType timestampIon = new IonTimestamp(DateTime.Now);
-            IIonType ntimestampIon = IIonType.NullOf(IonTypes.Timestamp);
+            IIonValue timestampIon = new IonTimestamp(DateTime.Now);
+            IIonValue ntimestampIon = IIonValue.NullOf(IonTypes.Timestamp);
 
             // string
-            IIonType stringIon = new IonString("stuff");
-            IIonType nstringIon = IIonType.NullOf(IonTypes.String);
+            IIonValue stringIon = new IonString("stuff");
+            IIonValue nstringIon = IIonValue.NullOf(IonTypes.String);
             #endregion
 
-            (Type type, IIonType ion, IIonType nullIon)[] types = new[]
+            (Type type, IIonValue ion, IIonValue nullIon)[] types = new[]
             {
                 (typeof(bool), boolIon, nboolIon),
                 (typeof(short), intIon, nintIon),

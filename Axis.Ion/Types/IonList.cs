@@ -1,95 +1,175 @@
-﻿using Axis.Luna.Common.Utils;
-using Axis.Luna.Extensions;
+﻿using Axis.Luna.Extensions;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using static Axis.Ion.Types.IIonValue;
 using static Axis.Luna.Extensions.Common;
 
 namespace Axis.Ion.Types
 {
-    /// <summary>
-    /// list of items
-    /// </summary>
-    public readonly struct IonList :
-        IIonConainer<IIonType>,
-        IReadonlyIndexer<int, IIonType>,
-        IIonDeepCopyable<IonList>
+    public class IonList :
+        IIonContainer<IIonValue>,
+        IIonDeepCopyable<IonList>,
+        IIonNullable<IonList>
     {
-        private readonly IIonType.Annotation[]? _annotations;
-        private readonly List<IIonType>? _elements;
+        private readonly Annotation[]? _annotations;
+        private readonly List<IIonValue>? _items;
+
+        #region Construction
+        /// <summary>
+        /// Creates a default (null) list
+        /// </summary>
+        public IonList()
+        : this((Annotation[]?)null, null)
+        {
+        }
 
         /// <summary>
-        /// A copy of the internal array of items is returned
+        /// Creates a default (null) instance with the given annotations
         /// </summary>
-        public IIonType[]? Value => _elements?.ToArray();
+        /// <param name="annotations"></param>
+        public IonList(params Annotation[] annotations)
+        : this(annotations, null)
+        {
+        }
+
+        /// <summary>
+        /// Creates an instance instantiated with the given initial properties
+        /// </summary>
+        /// <param name="items"></param>
+        public IonList(params IIonValue[] items)
+        : this(null, items)
+        {
+        }
+
+        /// <summary>
+        /// Creates an instance with the given annotations and items. If <paramref name="items"/> is null,
+        /// this becomes a default (null) instance.
+        /// </summary>
+        /// <param name="annotations"></param>
+        /// <param name="items"></param>
+        public IonList(
+            Annotation[]? annotations,
+            params IIonValue[]? items)
+        {
+            _annotations = annotations?.ToArray();
+            _items = items?
+                .ThrowIfAny(
+                    _item => _item is null,
+                    _ => new ArgumentException($"'{nameof(items)} must not contain null values'"))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Creates an instance from the given initializer
+        /// </summary>
+        /// <param name="initializer"></param>
+        /// <exception cref="ArgumentNullException"></exception>
+        public IonList(Initializer initializer)
+        : this(initializer?.Annotations ?? throw new ArgumentNullException(nameof(initializer)),
+              initializer.Items.ToArray())
+        {
+        }
+        #endregion
+
+        #region IIonValue
 
         public IonTypes Type => IonTypes.List;
 
-        public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
+        public bool IsNull => _items is null;
 
-        public int Count => _elements?.Count ?? -1;
+        public Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<Annotation>();
 
-        public IIonType this[int key]
+        public string ToIonText()
         {
-            get => _elements?[key] ?? throw new InvalidOperationException($"Cannot read from the default {nameof(IonList)}");
+            if (IsNull)
+                return "null.list";
+
+            return Value!
+                .Select(v => v.ToString())
+                .JoinUsing(", ")
+                .WrapIn("[", "]");
+        }
+        #endregion
+
+        #region IIonContainer
+
+        public IIonValue[]? Value => _items?.ToArray();
+
+        public bool ValueEquals(IRefValue<IIonValue[]> other)
+        {
+            return Value.NullOrTrue(other?.Value, Enumerable.SequenceEqual);
         }
 
-        public List<IIonType>? Items => _elements;
+        public static IonList Empty(params Annotation[] annotations) => new IonList(annotations);
 
-        public IonList(Initializer? initializer)
+        static IIonContainer<IIonValue> IIonContainer<IIonValue>.Empty(params Annotation[] annotations) => Empty(annotations);
+        #endregion
+
+        #region DeepCopyable
+        public IonList DeepCopy()
         {
-            _annotations = initializer?.Annotations
-                .Validate()
-                .ToArray();
-            _elements = initializer?.Elements.ToList();
+            return IsNull
+                ? new IonList(Annotations)
+                : Value!
+                    .Select(item => item.DeepCopy())
+                    .ToArray()
+                    .ApplyTo(items => new IonList(Annotations, items));
         }
 
-        public IonList(params IIonType.Annotation[] annotations)
-        {
-            _elements = null;
-            _annotations = annotations
-                .Validate()
-                .ToArray();
-        }
+        IIonValue IIonDeepCopyable<IIonValue>.DeepCopy() => DeepCopy();
+        #endregion
 
+        #region IIonNullable
         /// <summary>
         /// Creates a null instance of the <see cref="IonList"/>
         /// </summary>
         /// <param name="annotations">any available annotation</param>
         /// <returns>The newly created null instance</returns>
-        public static IonList Null(params IIonType.Annotation[] annotations) => new IonList(annotations);
-
-        /// <summary>
-        /// Creates and returns an empty <see cref="IonList"/> instance.
-        /// </summary>
-        /// <param name="annotations">any available annotation</param>
-        /// <returns>The newly created empty instance</returns>
-        public static IonList Empty(params IIonType.Annotation[] annotations) => new Initializer(annotations);
-
-        #region IIonValueType
-
-        public bool IsNull => Value == null;
-
-        public bool ValueEquals(IRefValue<IIonType[]> other)
-            => Value.NullOrTrue(other?.Value, Enumerable.SequenceEqual);
-
-        public string ToIonText()
-        {
-            return Value?
-                .Select(x => x.ToString())
-                .JoinUsing(", ")
-                .WrapIn("[", "]")
-                ?? "null.list";
-        }
-
+        public static IonList Null(params IIonValue.Annotation[] annotations) => new IonList(annotations);
         #endregion
 
-        #region Record Implementation
+        #region Members
+        public IIonValue this[int index]
+        {
+            get => _items is not null
+                ? _items[index]
+                : throw new InvalidOperationException("Attempting to retrieve item of 'null.list'");
+
+            set
+            {
+                if (_items is not null)
+                    _items[index] = value;
+
+                else throw new InvalidOperationException("Attempting to set item of 'null.list'");
+            }
+        }
+
+        public IonList Add(IIonValue value)
+        {
+            if (_items is null)
+                throw new InvalidOperationException("Attempting to add item of 'null.list'");
+
+            _items.Add(value);
+            return this;
+        }
+
+        public int Count => _items?.Count
+            ?? throw new InvalidOperationException("Attempting to query item count of 'null.list'");
+        #endregion
+
+        #region Record
+        public override string ToString()
+            => Annotations
+                .Select(a => a.ToString())
+                .Concat(ToIonText())
+                .JoinUsing("");
+
         public override int GetHashCode()
             => HashCode.Combine(
-                ValueHash(Value?.HardCast<IIonType, object>() ?? Enumerable.Empty<object>()),
-                ValueHash(Annotations.HardCast<IIonType.Annotation, object>()));
+                ValueHash(Value?.HardCast<IIonValue, object>() ?? Enumerable.Empty<object>()),
+                ValueHash(Annotations.HardCast<Annotation, object>()));
 
         public override bool Equals(object? obj)
         {
@@ -98,86 +178,63 @@ namespace Axis.Ion.Types
                 && other.Annotations.SequenceEqual(Annotations);
         }
 
-        public override string ToString() 
-            => Annotations
-                .Select(a => a.ToString())
-                .Concat(ToIonText())
-                .JoinUsing("");
-
-
-        public static bool operator ==(IonList first, IonList second) => first.Equals(second);
-
-        public static bool operator !=(IonList first, IonList second) => !first.Equals(second);
-
+        public static bool operator ==(IonList left, IonList right) => left.NullOrEquals(right);
+        public static bool operator !=(IonList left, IonList right) => !(left == right);
         #endregion
 
-        #region IIonDeepCopy<>
-        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+        public static implicit operator IonList(Initializer initializer) => new IonList(initializer);
+        public static implicit operator IonList(IIonValue[] items) => new IonList(items);
 
-        public IonList DeepCopy()
-        {
-            var annotations = Annotations;
-            return IsNull
-                ? new IonList(Annotations)
-                : Value!
-                    .Select(value => value.DeepCopy())
-                    .ToArray()
-                    .ApplyTo(values => new Initializer(annotations, values));
-        }
-        #endregion
-
-        public static implicit operator IonList(Initializer? initializer) => new IonList(initializer);
-
-        public static implicit operator IonList(IIonType[]? elements) 
-            => new IonList(
-                elements != null
-                    ? new Initializer(Array.Empty<IIonType.Annotation>(), elements)
-                    : null);
-
-        #region Nested types
+        #region Nested Types
 
         /// <summary>
-        /// Declarative initializer for the <see cref="IonList"/>
+        /// The Initializer for structs
         /// </summary>
-        public class Initializer: IEnumerable<IonValueWrapper>
+        public record Initializer : IEnumerable<IonValueWrapper>
         {
-            private readonly List<IIonType> _elements = new List<IIonType>();
-            private readonly IIonType.Annotation[] _annotations;
+            internal Annotation[] Annotations;
+            internal List<IIonValue> Items;
 
-            internal IIonType.Annotation[] Annotations => _annotations;
+            public int Count => Items.Count;
 
-            internal IIonType[] Elements => _elements.ToArray();
-
-            public int Count => _elements.Count;
-
-
-            public Initializer(IIonType.Annotation[] annotations, params IIonType[] elements)
-            {
-                _annotations = annotations.Validate();
-                _elements.AddRange(
-                    elements
-                        .ThrowIfNull(new ArgumentNullException(nameof(elements)))
-                        .Select(e => e.ThrowIfNull(new InvalidOperationException($"{nameof(elements)} cannot contain null"))));
-            }
-
-            public Initializer(string annotations, params IIonType[] elements)
-                : this(IIonType.Annotation.ParseCollection(annotations), elements)
-            { }
+            public IIonValue[] Values => Items.ToArray();
 
             public Initializer()
-                : this (Array.Empty<IIonType.Annotation>())
-            { }
+            : this((Annotation[]?)null, null)
+            {
+            }
 
-            #region initializer implementation
-            public IEnumerator<IonValueWrapper> GetEnumerator() => _elements.Select(v => v.Wrap()).GetEnumerator();
+            public Initializer(params Annotation[] annotations)
+            : this(annotations, null)
+            {
+            }
+
+            public Initializer(params IIonValue[] items)
+            : this(null, items)
+            {
+            }
+
+            public Initializer(
+                Annotation[]? annotations,
+                params IIonValue[]? items)
+            {
+                Annotations = annotations?.ToArray() ?? Array.Empty<Annotation>();
+                Items = items?
+                    .ToList()
+                    ?? new List<IIonValue>();
+            }
+
+            #region Initializer
+            public IEnumerator<IonValueWrapper> GetEnumerator() => Items.Select(v => v.Wrap()).GetEnumerator();
 
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-            public void Add(IonValueWrapper valueWrapper) 
-                => _elements.Add(valueWrapper.Value.ThrowIfNull(new ArgumentException($"Invalid {nameof(IonValueWrapper)} value")));
+            public void Add(IonValueWrapper valueWrapper)
+                => Items.Add(
+                    valueWrapper.Value.ThrowIfNull(
+                        new ArgumentException($"Invalid {nameof(IonValueWrapper)} value")));
             #endregion
         }
-
         #endregion
     }
 }

@@ -24,7 +24,7 @@ namespace Axis.Ion.Conversion.Converters
             ?? throw new InvalidOperationException($"'{nameof(ToIonList)}' method not found");
 
         #region IClrConverter
-        public bool CanConvert(Type destinationType, IIonType ion)
+        public bool CanConvert(Type destinationType, IIonValue ion)
         {
             if (ion is null)
                 throw new ArgumentNullException(nameof(ion));
@@ -38,7 +38,7 @@ namespace Axis.Ion.Conversion.Converters
                 || category == TypeCategory.SingleDimensionArray;
         }
 
-        public object? ToClr(Type destinationType, IIonType ion, ConversionContext context)
+        public object? ToClr(Type destinationType, IIonValue ion, ConversionContext context)
         {
             if (destinationType is null)
                 throw new ArgumentNullException(nameof(destinationType));
@@ -100,7 +100,7 @@ namespace Axis.Ion.Conversion.Converters
                 || category == TypeCategory.SingleDimensionArray;
         }
 
-        public IIonType ToIon(Type type, object? instance, ConversionContext options)
+        public IIonValue ToIon(Type type, object? instance, ConversionContext options)
         {
             type.ValidateCongruenceWith(instance?.GetType());
 

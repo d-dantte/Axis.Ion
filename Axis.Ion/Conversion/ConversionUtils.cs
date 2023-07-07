@@ -103,8 +103,7 @@ namespace Axis.Ion.Conversion
                 IonTypes.Timestamp => targetType.IsDateTime(out _),
                 IonTypes.String => typeof(string).Equals(clrType),
                 IonTypes.OperatorSymbol => typeof(string).Equals(clrType),
-                IonTypes.IdentifierSymbol => typeof(string).Equals(clrType),
-                IonTypes.QuotedSymbol => typeof(string).Equals(clrType),
+                IonTypes.TextSymbol => typeof(string).Equals(clrType),
                 IonTypes.Blob => targetType.Implements(typeof(ICollection<byte>)),
                 IonTypes.Clob => targetType.Implements(typeof(ICollection<byte>)),
                 IonTypes.List => targetType.ImplementsGenericInterface(typeof(ICollection<>)),
@@ -131,8 +130,7 @@ namespace Axis.Ion.Conversion
                 IonTypes.Decimal => typeof(decimal),
                 IonTypes.Timestamp => typeof(DateTimeOffset),
                 IonTypes.String => typeof(string),
-                IonTypes.IdentifierSymbol => typeof(string),
-                IonTypes.QuotedSymbol => typeof(string),
+                IonTypes.TextSymbol => typeof(string),
                 IonTypes.OperatorSymbol => typeof(string),
                 IonTypes.Blob => typeof(byte[]),
                 IonTypes.Clob => typeof(byte[]),
@@ -156,7 +154,7 @@ namespace Axis.Ion.Conversion
                 TypeCategory.Map => IonTypes.Struct,
                 TypeCategory.Collection => IonTypes.List,
                 TypeCategory.SingleDimensionArray => IonTypes.List,
-                TypeCategory.Enum => IonTypes.IdentifierSymbol,
+                TypeCategory.Enum => IonTypes.TextSymbol,
                 TypeCategory.Primitive =>
                     clrType.IsIntegral(out _) ? IonTypes.Int:
                     clrType.IsReal(out _) ? IonTypes.Float:
@@ -205,7 +203,7 @@ namespace Axis.Ion.Conversion
         /// <param name="context"></param>
         /// <returns></returns>
         internal static object? ToClrObject(this
-            IIonType ion,
+            IIonValue ion,
             Type targetType,
             ConversionContext context)
         {
@@ -214,10 +212,7 @@ namespace Axis.Ion.Conversion
 
             var objectIdAnnotation = ion.Annotations.FirstOrNull(ann => ann.Value.StartsWith(ObjectRefPrefix));
 
-            var objectId =
-                objectIdAnnotation is not null ? objectIdAnnotation.Value.Value.TrimStart(ObjectRefPrefix) :
-                ion is IonQuotedSymbol quoted ? quoted.Value.TrimStart(ObjectRefPrefix) :
-                null;
+            var objectId = objectIdAnnotation?.Value.TrimStart(ObjectRefPrefix);
 
             return objectId switch
             {
@@ -227,7 +222,7 @@ namespace Axis.Ion.Conversion
         }
 
 
-        internal static IIonType ToIonValue(this
+        internal static IIonValue ToIonValue(this
             object? clrValue,
             Type targetType,
             ConversionContext context)
@@ -238,7 +233,7 @@ namespace Axis.Ion.Conversion
             var clrType = clrValue?.GetType() ?? targetType;
 
             if (clrValue is null)
-                return IIonType.NullOf(CompatibleIonType(clrType));
+                return IIonValue.NullOf(CompatibleIonType(clrType));
 
             var ion = CategoryOf(targetType) switch
             {
@@ -247,7 +242,7 @@ namespace Axis.Ion.Conversion
                 TypeCategory.InvalidType => throw new ArgumentException($"Invalid target type: {targetType}"),
                 _ => context.TryTrack(clrValue, out var id)
                     ? Ionizer.ToIon(clrType, clrValue, context)
-                    : new IonQuotedSymbol($"{ObjectRefPrefix}{id}")
+                    : new IonTextSymbol($"{ObjectRefPrefix}{id}")
             };
             return ion;
         }

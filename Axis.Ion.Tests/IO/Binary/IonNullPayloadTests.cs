@@ -2,6 +2,7 @@
 using Axis.Ion.IO.Axion.Payload;
 using Axis.Ion.Types;
 using Axis.Ion.Utils;
+using Axis.Luna.Common.Results;
 
 namespace Axis.Ion.Tests.IO.Binary
 {
@@ -64,10 +65,10 @@ namespace Axis.Ion.Tests.IO.Binary
                 options,
                 table);
             Assert.AreEqual(49, payload2.Metadata.Metadata);
-            Assert.AreEqual(3, payload2.IonType.Annotations.Length);
+            Assert.AreEqual(3, payload2.IonValue.Annotations.Length);
             Assert.IsTrue(
-                new[] { "fenrir", "jotun", "'bilerofon'" }
-                .SequenceEqual(payload2.IonType.Annotations.Select(a => a.Value)));
+                new[] { "fenrir", "jotun", "bilerofon" }
+                .SequenceEqual(payload2.IonValue.Annotations.Select(a => a.Value)));
         }
     }
 }

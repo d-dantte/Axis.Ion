@@ -4,7 +4,7 @@ using static Axis.Ion.IO.Text.SerializerOptions;
 
 namespace Axis.Ion.IO.Text
 {
-    public struct SerializingContext
+    public readonly struct SerializingContext
     {
         public SerializerOptions Options { get; }
 

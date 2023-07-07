@@ -35,7 +35,7 @@ The first 4 bits (index 0 - 3) are reserved to represent actual type identifiers
 for indicating if annotations exist on the value, while the remaining 3 bits (index 5 - 7) are left for each
 type to use as it pleases.
 
-Following the first byte either byte-groups that represent annotations, or the payload for the ion-value.
+Following the first byte are either byte-groups that represent annotations, or the payload for the ion-value.
 
 
 Note: in the binary notations that follow, a  '.' indicates that the bit in that position is ignored.
@@ -143,10 +143,15 @@ See [var-byte](#var-byte).
 
 ### Custom-Metadata
 - null: `[..1.-0100]`
+- Decimal16: `[00..-0011]`
+- BigDecimal: `[01..-0011]`
 
 ### Description
-The binary representation for decimals here is a straightforward adaptation of the c# binary representation for decimal,
-ergo 16 bytes of data. This means decimal values have a fixed 17byte size.
+The binary representation for decimals here comes in 2 flavors:
+1.  The straightforward adaptation of the c# binary representation for decimal,
+	ergo 16 bytes of data.
+2.  The custom format for big decimal values. BigDecimals are a tuple of an int, and an arbitrary-length integer
+    represented by a [var-byte](#var-byte) value.
 
 
 ## Ion-Float
@@ -248,7 +253,7 @@ and is represented as a `var-byte`.
 - raw: `[00..-....]`
 - Int8 id: `[01..-....]`
 - Int16 id: `[10..-....]`
-- Intxx id: `[11..-....]
+- Intxx id: `[11..-....]`
 - 1-char-operator: `[00..-....]`
 - 2-char-operator: `[01..-....]`
 - 3-char-operator: `[10..-....]`
@@ -359,7 +364,7 @@ The sexp is exactly the same as to the [ion-list](#ion-list), except that operan
 - null: `[..1.-1101]`
 
 ### Description
-The list is similar to the [ion-list](#ion-list); that the `var-byte` count represents number of entries in the struct.
+The struct is similar to the [ion-list](#ion-list); that the `var-byte` count represents number of entries in the struct.
 Each entry is a key-value pair, with the key being either a quoted symbol, or an identifier, immediately followed by an ion-value.
 
 

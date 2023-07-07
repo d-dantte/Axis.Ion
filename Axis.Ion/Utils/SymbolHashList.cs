@@ -12,10 +12,10 @@ namespace Axis.Ion.Utils
     /// 1. null-symbols should NEVER be added to this hash-list
     /// 2. annotations MUST be stripped away from symbols before performing any operation on them in this class
     /// </summary>
-    public class SymbolHashList : IEnumerable<IIonTextSymbol>
+    public class SymbolHashList : IEnumerable<IonTextSymbol>
     {
-        private readonly Dictionary<int, IIonTextSymbol> _isMap = new Dictionary<int, IIonTextSymbol>();
-        private readonly Dictionary<IIonTextSymbol, int> _siMap = new Dictionary<IIonTextSymbol, int>();
+        private readonly Dictionary<int, IonTextSymbol> _isMap = new Dictionary<int, IonTextSymbol>();
+        private readonly Dictionary<IonTextSymbol, int> _siMap = new Dictionary<IonTextSymbol, int>();
 
         public int Count => _isMap.Count;
 
@@ -25,12 +25,12 @@ namespace Axis.Ion.Utils
         {
         }
 
-        public SymbolHashList(IEnumerable<IIonTextSymbol> types)
-        :this(types?.ToArray() ?? throw new ArgumentNullException(nameof(types)))
+        public SymbolHashList(IEnumerable<IonTextSymbol> types)
+        : this(types?.ToArray() ?? throw new ArgumentNullException(nameof(types)))
         {
         }
 
-        public SymbolHashList(params IIonTextSymbol[] types)
+        public SymbolHashList(params IonTextSymbol[] types)
         {
             if (types == null)
                 throw new ArgumentNullException(nameof(types));
@@ -39,11 +39,8 @@ namespace Axis.Ion.Utils
                 Add(item);
         }
 
-        public bool Remove(IIonTextSymbol value)
+        public bool Remove(IonTextSymbol value)
         {
-            if (value == null)
-                throw new ArgumentNullException(nameof(value));
-
             value = StripAnnotations(value);
 
             if (!_siMap.ContainsKey(value))
@@ -70,14 +67,20 @@ namespace Axis.Ion.Utils
             return true;
         }
 
-        public int Add(IIonTextSymbol value)
+        public int Add(IonTextSymbol value)
         {
             value = StripAnnotations(value);
             _ = TryAdd(value, out var index);
             return index;
         }
 
-        public bool TryAdd(IIonTextSymbol value, out int index)
+        /// <summary>
+        /// Adds the given symbol to the list.
+        /// </summary>
+        /// <param name="value">The symbol to add</param>
+        /// <param name="index">It's index within the list</param>
+        /// <returns>True if the symbol was absent before this call, otherwise false</returns>
+        public bool TryAdd(IonTextSymbol value, out int index)
         {
             value = StripAnnotations(value);
 
@@ -94,12 +97,12 @@ namespace Axis.Ion.Utils
             return true;
         }
 
-        public IIonTextSymbol this[int index]
+        public IonTextSymbol this[int index]
         {
             get => _isMap[index];
         }
 
-        public int IndexOf(IIonTextSymbol value)
+        public int IndexOf(IonTextSymbol value)
         {
             value = StripAnnotations(value);
 
@@ -108,13 +111,13 @@ namespace Axis.Ion.Utils
                 : -1;
         }
 
-        public bool Contains(IIonTextSymbol value)
+        public bool Contains(IonTextSymbol value)
         {
             value = StripAnnotations(value);
             return _siMap.ContainsKey(value);
         }
 
-        public bool TryGetSymbol(int index, out IIonTextSymbol symbol)
+        public bool TryGetSymbol(int index, out IonTextSymbol symbol)
         {
             if (!_isMap.TryGetValue(index, out symbol))
                 return false;
@@ -122,7 +125,7 @@ namespace Axis.Ion.Utils
             return true;
         }
 
-        public bool TryGetIndex(IIonTextSymbol symbol, out int index)
+        public bool TryGetIndex(IonTextSymbol symbol, out int index)
         {
             if (!_siMap.TryGetValue(symbol, out index))
                 return false;
@@ -131,65 +134,26 @@ namespace Axis.Ion.Utils
         }
 
         public bool TryGetSymbolID(
-            IIonTextSymbol symbol,
+            IonTextSymbol symbol,
             out IonSymbolPayload.IonSymbolID id)
         {
             id = TryGetIndex(symbol, out var index)
-                ? new IonSymbolPayload.IonSymbolID(symbol.Type, index)
+                ? new IonSymbolPayload.IonSymbolID(index)
                 : default;
 
             return !id.IsNull;
         }
 
-        /// <summary>
-        /// Adds the given symbol to the symbol-table following these rules:
-        /// <list type="number">
-        /// <item>If the symbol doesn't exist in the table, add it and return the same item</item>
-        /// <item>If the symbol exists in the table, return the symbol-id for that symbol</item>
-        /// </list>
-        /// </summary>
-        /// <param name="symbol">the symbol</param>
-        /// <returns>The symbol, or it's ID depending on the state of the symbol-table</returns>
-        public IIonTextSymbol AddOrGetID(IIonTextSymbol symbol)
+        private IonTextSymbol StripAnnotations(IonTextSymbol symbol)
         {
-            if (symbol is IonSymbolPayload.IonSymbolID)
-                throw new InvalidOperationException($"Invalid symbol type: {typeof(IonSymbolPayload.IonSymbolID)}");
-
-            if (symbol.IsNull)
-                return symbol;
-
-            var stripped = StripAnnotations(symbol);
-
-            if (_siMap.TryGetValue(stripped, out var index))
-                return new IonSymbolPayload.IonSymbolID(symbol.Type, index);
-
-            _ = Add(symbol);
-            return symbol;
-        }
-
-        private IIonTextSymbol StripAnnotations(IIonTextSymbol symbol)
-        {
-            if (symbol == null)
-                throw new ArgumentNullException(nameof(symbol));
-
-            if (symbol is not IonIdentifier
-                && symbol is not IonQuotedSymbol)
-                throw new ArgumentException($"Invalid symbol type: {(symbol?.GetType().Name ?? "")}");
-
             if (symbol.Annotations.Length == 0)
                 return symbol;
 
-            // else
-            return symbol switch
-            {
-                IonIdentifier id => new IonIdentifier(id.Value),
-                IonQuotedSymbol quoted => new IonQuotedSymbol(quoted.Value),
-                _ => throw new ArgumentException($"Invalid text-symbol: {symbol.GetType()}")
-            };
+            return new IonTextSymbol(symbol.Value);
         }
 
         #region IEnumerable
-        public IEnumerator<IIonTextSymbol> GetEnumerator() => _siMap.Keys.GetEnumerator();
+        public IEnumerator<IonTextSymbol> GetEnumerator() => _siMap.Keys.GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         #endregion

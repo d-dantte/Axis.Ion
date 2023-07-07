@@ -188,9 +188,10 @@ namespace Axis.Ion.Conversion
         public ConversionOptionsBuilder WithIgnoredProperties(Type pocoType, params string[] propertyNames)
         {
             return propertyNames
-                .ThrowIfContainsNull(new ArgumentNullException("null property-names are forbidden"))
+                .ThrowIfContainsNull(new ArgumentException("null property-names are forbidden"))
                 .Select(name => pocoType.GetProperty(name))
                 .Where(property => property is not null)
+                .Select(property => property!)
                 .ToArray()
                 .ApplyTo(WithIgnoredProperties);
         }

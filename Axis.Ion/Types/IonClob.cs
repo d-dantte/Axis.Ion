@@ -9,18 +9,21 @@ namespace Axis.Ion.Types
     /// <summary>
     /// Represents a stream of ASCII encoded bytes of characters
     /// </summary>
-    public readonly struct IonClob : IRefValue<byte[]>, IIonDeepCopyable<IonClob>
+    public readonly struct IonClob :
+        IRefValue<byte[]>,
+        IIonDeepCopyable<IonClob>,
+        IIonNullable<IonClob>
     {
-        private readonly IIonType.Annotation[] _annotations;
+        private readonly IIonValue.Annotation[] _annotations;
         private readonly byte[]? _clob;
 
         public byte[]? Value => _clob?.ToArray();
 
         public IonTypes Type => IonTypes.Clob;
 
-        public IIonType.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonType.Annotation>();
+        public IIonValue.Annotation[] Annotations => _annotations?.ToArray() ?? Array.Empty<IIonValue.Annotation>();
 
-        public IonClob(byte[]? value, params IIonType.Annotation[] annotations)
+        public IonClob(byte[]? value, params IIonValue.Annotation[] annotations)
         {
             _clob = value;
             _annotations = annotations
@@ -33,7 +36,7 @@ namespace Axis.Ion.Types
         /// </summary>
         /// <param name="annotations">any available annotation</param>
         /// <returns>The newly created null instance</returns>
-        public static IonClob Null(params IIonType.Annotation[] annotations) => new IonClob(null, annotations);
+        public static IonClob Null(params IIonValue.Annotation[] annotations) => new IonClob(null, annotations);
 
 
         #region IIonType
@@ -46,7 +49,7 @@ namespace Axis.Ion.Types
         public string ToIonText()
         {
             if (_clob is null)
-                return "null.blob";
+                return "null.clob";
 
             return _clob
                 .ApplyTo(Encoding.ASCII.GetString)
@@ -61,7 +64,7 @@ namespace Axis.Ion.Types
 
         #region Record Implementation
         public override int GetHashCode()
-            => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonType.Annotation, object>()));
+            => HashCode.Combine(Value, ValueHash(Annotations.HardCast<IIonValue.Annotation, object>()));
 
         public override bool Equals(object? obj)
         {
@@ -83,7 +86,7 @@ namespace Axis.Ion.Types
         #endregion
 
         #region IIonDeepCopy<>
-        IIonType IIonDeepCopyable<IIonType>.DeepCopy() => DeepCopy();
+        IIonValue IIonDeepCopyable<IIonValue>.DeepCopy() => DeepCopy();
 
         public IonClob DeepCopy() => new IonClob(Value, Annotations);
         #endregion

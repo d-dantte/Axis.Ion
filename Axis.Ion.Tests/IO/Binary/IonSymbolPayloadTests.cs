@@ -2,6 +2,7 @@
 using Axis.Ion.IO.Axion.Payload;
 using Axis.Ion.Types;
 using Axis.Ion.Utils;
+using Axis.Luna.Common.Results;
 
 namespace Axis.Ion.Tests.IO.Binary
 {
@@ -23,37 +24,29 @@ namespace Axis.Ion.Tests.IO.Binary
             Assert.AreEqual(40, memoryArray[0]);
 
             memory = new MemoryStream();
-            payload = new IonSymbolPayload(IonOperator.Parse("**"));
+            payload = new IonSymbolPayload(IonOperator.Parse("**").Resolve());
             ITypePayload.Write(memory, payload, options, table);
             memoryArray = memory.ToArray();
             Assert.AreEqual(3, memoryArray.Length);
             Assert.AreEqual(72, memoryArray[0]);
 
-            // quoted symbol
+            // symbol
             memory = new MemoryStream();
-            payload = new IonSymbolPayload(default(IonQuotedSymbol));
-            ITypePayload.Write(memory, payload, options, table);
-            memoryArray = memory.ToArray();
-            Assert.AreEqual(1, memoryArray.Length);
-            Assert.AreEqual(42, memoryArray[0]);
-
-            memory = new MemoryStream();
-            payload = new IonSymbolPayload(IonQuotedSymbol.Parse("'stuffz again'"));
-            ITypePayload.Write(memory, payload, options, table);
-            memoryArray = memory.ToArray();
-            Assert.AreEqual(26, memoryArray.Length);
-            Assert.AreEqual(10, memoryArray[0]);
-
-            // identifier symbol
-            memory = new MemoryStream();
-            payload = new IonSymbolPayload(default(IonIdentifier));
+            payload = new IonSymbolPayload(default(IonTextSymbol));
             ITypePayload.Write(memory, payload, options, table);
             memoryArray = memory.ToArray();
             Assert.AreEqual(1, memoryArray.Length);
             Assert.AreEqual(41, memoryArray[0]);
 
             memory = new MemoryStream();
-            payload = new IonSymbolPayload(IonIdentifier.Parse("stuffz_again"));
+            payload = new IonSymbolPayload(IonTextSymbol.Parse("'stuffz again'").Resolve());
+            ITypePayload.Write(memory, payload, options, table);
+            memoryArray = memory.ToArray();
+            Assert.AreEqual(26, memoryArray.Length);
+            Assert.AreEqual(9, memoryArray[0]);
+
+            memory = new MemoryStream();
+            payload = new IonSymbolPayload(IonTextSymbol.Parse("stuffz_again").Resolve());
             ITypePayload.Write(memory, payload, options, table);
             memoryArray = memory.ToArray();
             Assert.AreEqual(26, memoryArray.Length);
@@ -67,7 +60,7 @@ namespace Axis.Ion.Tests.IO.Binary
             var table = new SymbolHashList();
 
             var memory = new MemoryStream();
-            var payload = new IonSymbolPayload(IonOperator.Parse("**"));
+            var payload = new IonSymbolPayload(IonOperator.Parse("**").Resolve());
             ITypePayload.Write(memory, payload, options, table);
             memory.Position = 0;
             var payload2 = IonSymbolPayload.Read(
@@ -76,12 +69,12 @@ namespace Axis.Ion.Tests.IO.Binary
                 options,
                 table);
 
-            Assert.IsTrue(payload2.IonType is IonOperator);
-            Assert.AreEqual("**", payload2.IonType.ToIonText());
+            Assert.IsTrue(payload2.IonValue is IonOperator);
+            Assert.AreEqual("**", payload2.IonValue.ToIonText());
 
 
             memory = new MemoryStream();
-            payload = new IonSymbolPayload(IonIdentifier.Parse("stuff"));
+            payload = new IonSymbolPayload(IonTextSymbol.Parse("stuff").Resolve());
             ITypePayload.Write(memory, payload, options, table);
             memory.Position = 0;
             payload2 = IonSymbolPayload.Read(
@@ -90,22 +83,22 @@ namespace Axis.Ion.Tests.IO.Binary
                 options,
                 table);
 
-            Assert.IsTrue(payload2.IonType is IonIdentifier);
-            Assert.AreEqual("stuff", payload2.IonType.ToIonText());
+            Assert.IsTrue(payload2.IonValue is IonTextSymbol);
+            Assert.AreEqual("stuff", payload2.IonValue.ToIonText());
 
 
             memory = new MemoryStream();
-            payload = new IonSymbolPayload(IonQuotedSymbol.Parse("'stuff'"));
+            payload = new IonSymbolPayload(IonTextSymbol.Parse("'stuff'").Resolve());
             ITypePayload.Write(memory, payload, options, table);
             memory.Position = 0;
             payload2 = IonSymbolPayload.Read(
                 memory,
                 TypeMetadata.ReadMetadata(memory),
                 options,
-                table);
+                (table = new SymbolHashList()));
 
-            Assert.IsTrue(payload2.IonType is IonQuotedSymbol);
-            Assert.AreEqual("'stuff'", payload2.IonType.ToIonText());
+            Assert.IsTrue(payload2.IonValue is IonTextSymbol);
+            Assert.AreEqual("stuff", payload2.IonValue.ToIonText());
         }
     }
 }

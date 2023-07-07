@@ -11,7 +11,7 @@ namespace Axis.Ion.Conversion.Converters
     internal class PrimitiveConverter : IConverter
     {
         #region IClrConverter
-        public bool CanConvert(Type destinationType, IIonType ion)
+        public bool CanConvert(Type destinationType, IIonValue ion)
         {
             if (destinationType is null)
                 throw new ArgumentNullException(nameof(destinationType));
@@ -29,7 +29,7 @@ namespace Axis.Ion.Conversion.Converters
                 IonTypes.String => destinationType.IsString(),
                 // For converting to clr maps or lists, a clr-enum type may be lost, and so the best
                 // possible conversion will be to a string.
-                IonTypes.IdentifierSymbol => destinationType.IsString(),
+                IonTypes.TextSymbol => destinationType.IsString(),
                 _ => false
             };
         }
@@ -47,7 +47,7 @@ namespace Axis.Ion.Conversion.Converters
         /// <exception cref="ArgumentException">
         ///     If the conversion fails
         /// </exception>
-        public object? ToClr(Type destinationType, IIonType ion, ConversionContext context)
+        public object? ToClr(Type destinationType, IIonValue ion, ConversionContext context)
         {
             if (destinationType is null)
                 throw new ArgumentNullException(nameof(destinationType));
@@ -68,8 +68,7 @@ namespace Axis.Ion.Conversion.Converters
                 return ion switch
                 {
                     IonString @string => @string.Value,
-                    IonIdentifier identifier => identifier.Value,
-                    IonQuotedSymbol quoted => quoted.Value,
+                    IonTextSymbol symbol => symbol.Value,
                     IonOperator @operator => @operator.AsString(),
                     _ => throw new ArgumentException($"Invalid ion type: {ion.Type}, expected: {IonTypes.String}")
                 };
@@ -175,7 +174,7 @@ namespace Axis.Ion.Conversion.Converters
         }
 
         /// <summary>
-        /// Converts the given clr <paramref name="instance"/> into a <see cref="IIonType"/> instance.
+        /// Converts the given clr <paramref name="instance"/> into a <see cref="IIonValue"/> instance.
         /// </summary>
         /// <param name="sourceType">The type from which the conversion is made</param>
         /// <param name="instance">The instance to be converted</param>
@@ -187,7 +186,7 @@ namespace Axis.Ion.Conversion.Converters
         /// <exception cref="ArgumentException">
         ///     If the conversion fails
         /// </exception>
-        public IIonType ToIon(Type sourceType, object? instance, ConversionContext context)
+        public IIonValue ToIon(Type sourceType, object? instance, ConversionContext context)
         {
             if (sourceType is null)
                 throw new ArgumentNullException(nameof(sourceType));
@@ -195,7 +194,7 @@ namespace Axis.Ion.Conversion.Converters
             if (sourceType.IsBoolean(out _))
                 return instance switch
                 {
-                    null => IIonType.NullOf(IonTypes.Bool),
+                    null => IIonValue.NullOf(IonTypes.Bool),
                     bool @bool => new IonBool(@bool),
                     _ => throw new ArgumentException($"Invalid instance: {instance.GetType()}")
                 };
@@ -203,7 +202,7 @@ namespace Axis.Ion.Conversion.Converters
             if (sourceType.IsString())
                 return instance switch
                 {
-                    null => IIonType.NullOf(IonTypes.String),
+                    null => IIonValue.NullOf(IonTypes.String),
                     string @string => new IonString(@string),
                     _ => throw new ArgumentException($"Invalid instance: {instance.GetType()}")
                 };
@@ -211,7 +210,7 @@ namespace Axis.Ion.Conversion.Converters
             if (sourceType.IsIntegral(out _))
                 return instance switch
                 {
-                    null => IIonType.NullOf(IonTypes.Int),
+                    null => IIonValue.NullOf(IonTypes.Int),
                     short @short => new IonInt(@short),
                     ushort @ushort => new IonInt(@ushort),
                     int @int => new IonInt(@int),
@@ -225,7 +224,7 @@ namespace Axis.Ion.Conversion.Converters
             if (sourceType.IsReal(out _))
                 return instance switch
                 {
-                    null => IIonType.NullOf(IonTypes.Float),
+                    null => IIonValue.NullOf(IonTypes.Float),
                     float @float => new IonFloat(@float),
                     double @double => new IonFloat(@double),
                     _ => throw new ArgumentException($"Invalid instance: {instance.GetType()}")
@@ -234,7 +233,7 @@ namespace Axis.Ion.Conversion.Converters
             if (sourceType.IsDecimal(out _))
                 return instance switch
                 {
-                    null => IIonType.NullOf(IonTypes.Decimal),
+                    null => IIonValue.NullOf(IonTypes.Decimal),
                     decimal @decimal => new IonDecimal(@decimal),
                     _ => throw new ArgumentException($"Invalid instance: {instance.GetType()}")
                 };
@@ -242,7 +241,7 @@ namespace Axis.Ion.Conversion.Converters
             if (sourceType.IsDateTime(out _))
                 return instance switch
                 {
-                    null => IIonType.NullOf(IonTypes.Timestamp),
+                    null => IIonValue.NullOf(IonTypes.Timestamp),
                     DateTimeOffset datetime => new IonTimestamp(datetime),
                     DateTime datetime => new IonTimestamp(datetime),
                     _ => throw new ArgumentException($"Invalid instance: {instance.GetType()}")
